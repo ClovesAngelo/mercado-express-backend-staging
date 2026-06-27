@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN_GERAL
+  GESTOR_MERCADO
+  CLIENTE
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  name      String
+  password  String
+  role      UserRole  @default(CLIENTE)
+  marketId  String?
+  market    Market?   @relation("MarketManagers", fields: [marketId], references: [id])
+  carts     Cart[]
+  orders    Order[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
+model Market {
+  id              String    @id @default(uuid())
+  name            String
+  fantasyName     String?
+  companyName     String?
+  document        String?   // CPF/CNPJ
+  email           String?
+  address         String
+  description     String?
+  phone           String?
+  imageUrl        String?
+  whatsapp        String?
+  logoUrl         String?
+  bannerUrl       String?
+  openTime        String?
+  closeTime       String?
+  deliveryFee     Float     @default(0)
+  minOrderValue   Float     @default(0)
+  avgDeliveryTime String?
+  isActive        Boolean  @default(true)
+  managerId       String?   // Campo legado - manter para compatibilidade
+  managers        User[]    @relation("MarketManagers")
+  deletedAt       DateTime?
+  products        Product[]
+  orders          Order[]
+  deliveryAreas   DeliveryArea[]
+  ratings         Rating[]
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model DeliveryArea {
+  id          String   @id @default(uuid())
+  marketId    String
+  market      Market   @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  neighborhood String
+  city        String
+  state       String
+  zipCode     String?
+  fee         Float
+  avgTime     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  deletedAt DateTime?
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Product {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  price       Float
+  imageUrl    String?
+  stock       Int       @default(0)
+  minStock    Int       @default(0)
+  isActive    Boolean   @default(true)
+  deletedAt   DateTime?
+  marketId    String
+  market      Market    @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model CartItem {
+  id        String  @id @default(uuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity  Int     @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId])
+}
+
+model Order {
+  id            String      @id @default(uuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  marketId      String
+  market        Market      @relation(fields: [marketId], references: [id], onDelete: Restrict)
+  status        String      @default("PENDING")
+  total         Float
+  deliveryFee   Float       @default(0)
+  customerName  String?
+  customerPhone String?
+  zipCode       String?
+  street        String?
+  number        String?
+  complement    String?
+  neighborhood  String?
+  city          String?
+  state         String?
+  reference     String?
+  paymentMethod String?
+  needsChange   Boolean?
+  changeFor     Float?
+  viewedByManager Boolean   @default(false)
+  deletedAt     DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  items         OrderItem[]
+  rating        Rating?
+}
+
+model OrderItem {
+  id          String  @id @default(uuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productName String
+  productPrice Float
+  quantity    Int
+  subtotal    Float
+}
+
+model Rating {
+  id        String   @id @default(uuid())
+  marketId  String
+  market    Market   @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId    String
+  userName  String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([marketId, userId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  userName   String
+  userEmail  String
+  action     String
+  entity     String
+  entityId   String?
+  oldValues  Json?
+  newValues  Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+}
+
+model ProductImage {
+  id          String   @id @default(uuid())
+  url         String
+  name        String
+  category    String?
+  tags        String[]
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

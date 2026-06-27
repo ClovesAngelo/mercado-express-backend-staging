@@ -1,0 +1,76 @@
+# ============================================
+# MERCADO EXPRESS — ROOT .gitignore
+# ============================================
+
+# Environment files with real secrets
+.env
+.env.local
+.env.development
+.env.development.local
+.env.staging
+.env.staging.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+.env.*.local
+.env.*.local.*
+
+# Keep example env files (no real secrets)
+!.env.example
+!.env.staging.example
+
+# Node dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Local development databases
+*.db
+*.db-journal
+*.sqlite
+dev.db
+
+# Build artifacts
+*.tsbuildinfo
+
+# Temp
+.temp
+.tmp
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# Runtime
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Diagnostic reports
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
