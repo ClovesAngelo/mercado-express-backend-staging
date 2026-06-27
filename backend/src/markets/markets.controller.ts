@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete, UseGuards, Req, HttpException, HttpStatus, Logger } from '@nestjs/common';
+﻿import { Controller, Get, Post, Body, Param, Patch, Delete, UseGuards, Req, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { MarketsService } from './markets.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -42,7 +42,7 @@ export class MarketsController {
   }
 
   @Get()
-  @Roles(UserRole.ADMIN_GERAL, UserRole.GESTOR_MERCADO)
+  @Roles(UserRole.ADMIN_GERAL, UserRole.GESTOR_MERCADO, UserRole.CLIENTE)
   async findAll() {
     try {
       return await this.marketsService.findAll();
@@ -169,3 +169,4 @@ export class MarketsController {
     }
   }
 }
+

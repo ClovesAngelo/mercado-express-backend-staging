@@ -16,15 +16,32 @@ interface Market {
 export default function Home() {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get('/markets').then(({ data }) => {
-      setMarkets(Array.isArray(data) ? data : []);
-      setLoading(false);
-    }).catch(() => {
-      setMarkets([]);
-      setLoading(false);
-    });
+    api.get('/markets')
+      .then(({ data }) => {
+        setMarkets(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch((error) => {
+        const status = error.response?.status;
+        const isAuthError = status === 401 || status === 403;
+
+        console.error('[Home] Erro ao carregar mercados:', {
+          status,
+          message: error.message,
+          data: error.response?.data,
+        });
+
+        setMarkets([]);
+        setErrorMsg(
+          isAuthError
+            ? 'Você não tem permissão para ver mercados no momento.'
+            : 'Não foi possível carregar os mercados. Tente novamente mais tarde.'
+        );
+        setLoading(false);
+      });
   }, []);
 
   return (
@@ -33,6 +50,11 @@ export default function Home() {
         <h1 className="text-3xl font-bold text-gray-900">Mercados</h1>
         <p className="text-gray-500 mt-1">Escolha um mercado para começar</p>
       </div>
+      {errorMsg && (
+        <div className="mb-6 p-4 rounded-lg bg-red-50 text-red-700 border border-red-200">
+          {errorMsg}
+        </div>
+      )}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1,2,3].map(i => (
