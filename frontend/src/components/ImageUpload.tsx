@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
-import { uploadMarketImage, deleteMarketImage } from '../services/supabase';
+import { uploadService } from '../services/upload.service';
 
 interface ImageUploadProps {
   value?: string;
@@ -36,9 +36,8 @@ export default function ImageUpload({ value, onChange, disabled }: ImageUploadPr
       const localPreview = URL.createObjectURL(file);
       setPreview(localPreview);
 
-      // Fazer upload para Supabase
-      const marketId = 'temp-' + Date.now(); // Será substituído pelo ID real
-      const imageUrl = await uploadMarketImage(file, marketId);
+      // Fazer upload via backend
+      const imageUrl = await uploadService.uploadProductImage(file);
       
       setPreview(imageUrl);
       onChange(imageUrl);
@@ -59,7 +58,7 @@ export default function ImageUpload({ value, onChange, disabled }: ImageUploadPr
   const handleRemove = async () => {
     if (value) {
       try {
-        await deleteMarketImage(value);
+        await uploadService.deleteProductImage(value);
       } catch (error) {
         console.error('Erro ao deletar imagem:', error);
       }

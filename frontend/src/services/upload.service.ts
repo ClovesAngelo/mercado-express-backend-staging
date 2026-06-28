@@ -13,4 +13,10 @@ export const uploadService = {
 
     return data.url;
   },
+  deleteProductImage: async (imageUrl: string): Promise<void> => {
+    await api.delete('/upload/product-image', {
+      data: { imageUrl },
+    });
+  },
+
 };
