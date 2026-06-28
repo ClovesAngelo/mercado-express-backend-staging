@@ -98,6 +98,32 @@ export class MarketsService {
     });
   }
 
+  async findOnePublic(id: string) {
+    return this.prisma.market.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        fantasyName: true,
+        companyName: true,
+        address: true,
+        description: true,
+        phone: true,
+        whatsapp: true,
+        logoUrl: true,
+        bannerUrl: true,
+        openTime: true,
+        closeTime: true,
+        deliveryFee: true,
+        minOrderValue: true,
+        avgDeliveryTime: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
   async setActive(id: string, isActive: boolean) {
     return this.prisma.market.update({
       where: { id },

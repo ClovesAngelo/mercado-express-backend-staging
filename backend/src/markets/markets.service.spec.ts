@@ -169,6 +169,67 @@ describe('MarketsService', () => {
     });
   });
 
+  describe('findOnePublic', () => {
+    it('should return a public market by id with safe fields only', async () => {
+      const publicFields = {
+        id: 'market-1',
+        name: 'Test Market',
+        fantasyName: null,
+        companyName: null,
+        address: '123 Test St',
+        description: 'A test market',
+        phone: '11999999999',
+        whatsapp: null,
+        logoUrl: null,
+        bannerUrl: null,
+        openTime: null,
+        closeTime: null,
+        deliveryFee: 0,
+        minOrderValue: 0,
+        avgDeliveryTime: null,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      prisma.market.findUnique.mockResolvedValue(publicFields);
+
+      const result = await marketsService.findOnePublic('market-1');
+
+      expect(result).toEqual(publicFields);
+      expect(prisma.market.findUnique).toHaveBeenCalledWith({
+        where: { id: 'market-1' },
+        select: {
+          id: true,
+          name: true,
+          fantasyName: true,
+          companyName: true,
+          address: true,
+          description: true,
+          phone: true,
+          whatsapp: true,
+          logoUrl: true,
+          bannerUrl: true,
+          openTime: true,
+          closeTime: true,
+          deliveryFee: true,
+          minOrderValue: true,
+          avgDeliveryTime: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    });
+
+    it('should return null when public market does not exist', async () => {
+      prisma.market.findUnique.mockResolvedValue(null);
+
+      const result = await marketsService.findOnePublic('nonexistent');
+
+      expect(result).toBeNull();
+    });
+  });
+
   describe('update', () => {
     it('should update a market as admin', async () => {
       const updateData = { name: 'Updated Market' };

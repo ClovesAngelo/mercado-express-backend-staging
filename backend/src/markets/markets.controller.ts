@@ -1,4 +1,4 @@
-﻿import { Controller, Get, Post, Body, Param, Patch, Delete, UseGuards, Req, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Delete, UseGuards, Req, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { MarketsService } from './markets.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -99,9 +99,13 @@ export class MarketsController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN_GERAL, UserRole.GESTOR_MERCADO)
-  async findOne(@Param('id') id: string) {
+  @Roles(UserRole.ADMIN_GERAL, UserRole.GESTOR_MERCADO, UserRole.CLIENTE)
+  async findOne(@Param('id') id: string, @Req() req: any) {
     try {
+      const user = req.user;
+      if (user?.role === UserRole.CLIENTE) {
+        return await this.marketsService.findOnePublic(id);
+      }
       return await this.marketsService.findOne(id);
     } catch (error) {
       this.logger.error(`ERROR fetching market: ${(error as Error).message}`, (error as Error).stack);
@@ -155,7 +159,7 @@ export class MarketsController {
   }
 
   @Patch(':id')
-  @Roles(UserRole.ADMIN_GERAL, UserRole.GESTOR_MERCADO)
+  @Roles(UserRole.ADMIN_GERAL, UserRole.GESTOR_MERCADO, UserRole.CLIENTE)
   async update(@Param('id') id: string, @Body() updateData: any, @Req() req: any) {
     try {
       const user = req.user;
