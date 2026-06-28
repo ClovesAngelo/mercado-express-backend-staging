@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import ImageUpload from '../components/ImageUpload';
 import { TrendingUp, Store, Users, ShoppingCart, DollarSign, Package } from 'lucide-react';
@@ -56,6 +57,7 @@ interface DashboardStats {
 
 export default function Admin() {
   const { user, isAdmin } = useAuth();
+  const navigate = useNavigate();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -245,7 +247,7 @@ export default function Admin() {
               Gestores
             </button>
             <button
-              onClick={() => window.location.href = '/admin/managers'}
+              onClick={() => navigate('/admin/managers')}
               className="ml-4 text-sm text-blue-600 hover:text-blue-800"
             >
               Gerenciar Gestores →
@@ -680,7 +682,7 @@ export default function Admin() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button
-                          onClick={() => window.location.href = '/admin/managers'}
+                          onClick={() => navigate('/admin/managers')}
                           className="text-blue-600 hover:text-blue-900 mr-3"
                         >
                           Editar

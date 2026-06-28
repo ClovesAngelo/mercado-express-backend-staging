@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { Store, MapPin } from 'lucide-react';
@@ -14,6 +15,7 @@ interface Market {
 }
 
 export default function Home() {
+  const { user } = useAuth();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -64,7 +66,9 @@ export default function Home() {
       ) : markets.length === 0 ? (
         <div className="text-center py-16">
           <Store size={64} className="mx-auto text-gray-300 mb-4" />
-          <p className="text-gray-500 text-lg">Nenhum mercado disponível</p>
+          <p className="text-gray-500 text-lg">
+            {user ? 'Nenhum mercado disponível' : 'Faça login para conseguir verificar os mercados disponíveis'}
+          </p>
         </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
