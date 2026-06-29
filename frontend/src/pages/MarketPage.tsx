@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { ShoppingCart, MapPin, Phone, Clock, Store, ChevronRight } from 'lucide-react';
@@ -40,11 +40,13 @@ interface Market {
 export default function MarketPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [market, setMarket] = useState<Market | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [addingId, setAddingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -87,6 +89,20 @@ export default function MarketPage() {
   const filteredProducts = selectedCategory === 'all' 
     ? products 
     : products.filter(p => p.categoryId === selectedCategory);
+
+  const handleAddToCart = async (productId: string) => {
+    try {
+      setAddingId(productId);
+      await api.post('/cart/items', { productId, quantity: 1 });
+      navigate('/cart');
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Erro ao adicionar ao carrinho';
+      alert(msg);
+      console.error('[MarketPage] Erro ao adicionar ao carrinho:', err.message);
+    } finally {
+      setAddingId(null);
+    }
+  };
 
   const formatTime = (time: string) => {
     if (!time) return '';
@@ -309,13 +325,14 @@ export default function MarketPage() {
                     </div>
 
                     {user && product.stock > 0 && (
-                      <Link
-                        to={`/cart`}
-                        className="w-full bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 transition flex items-center justify-center gap-2"
+                      <button
+                        onClick={() => handleAddToCart(product.id)}
+                        disabled={addingId === product.id}
+                        className="w-full bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
                       >
                         <ShoppingCart size={18} />
-                        Adicionar ao Carrinho
-                      </Link>
+                        {addingId === product.id ? 'Adicionando...' : 'Adicionar ao Carrinho'}
+                      </button>
                     )}
 
                     {!user && (
