@@ -31,12 +31,14 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+      <nav className="sticky top-0 z-50 border-b border-emerald-100 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-14 sm:h-16 items-center justify-between">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 font-bold text-lg text-slate-900 shrink-0">
-              <Store size={22} className="text-emerald-600" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100">
+                <Store size={18} className="text-emerald-600" />
+              </div>
               <span className="hidden xs:inline sm:inline">Mercado Express</span>
             </Link>
 
@@ -60,7 +62,7 @@ export default function Layout() {
 
                 <div className="flex items-center gap-2 min-w-0">
                   <User size={15} className="shrink-0 text-slate-400" />
-                  <span className="text-sm text-slate-700 max-w-[120px] truncate">{user.name}</span>
+                  <span className="text-sm text-slate-700 max-w-[120px] truncate" title={user.name}>{user.name.split(' ')[0]}</span>
                   {userRole && <RoleBadge role={userRole} />}
                 </div>
 
@@ -70,7 +72,7 @@ export default function Layout() {
                   title="Sair"
                 >
                   <LogOut size={15} />
-                  <span className="hidden lg:inline">Sair</span>
+                  <span className="sm:inline">Sair</span>
                 </button>
               </div>
             ) : (

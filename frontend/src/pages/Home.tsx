@@ -16,8 +16,9 @@ interface Market {
 
 function MarketPlaceholder() {
   return (
-    <div className="flex h-full items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-50">
-      <Store size={40} className="text-emerald-300" />
+    <div className="flex h-full flex-col items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-50 gap-1">
+      <Store size={36} className="text-emerald-300" />
+      <span className="text-[10px] font-medium text-emerald-400/60">Sem imagem</span>
     </div>
   );
 }
@@ -72,7 +73,7 @@ export default function Home() {
       {loading ? (
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map(i => (
-            <div key={`skeleton-${i}`} className="h-[320px] animate-pulse rounded-2xl bg-slate-200" />
+            <div key={`skeleton-${i}`} className="h-[340px] animate-pulse rounded-2xl bg-slate-200" />
           ))}
         </div>
       ) : markets.length === 0 ? (
@@ -88,7 +89,7 @@ export default function Home() {
             <Link
               key={market.id}
               to={`/markets/${market.id}`}
-              className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
               {/* Image */}
               <div className="relative h-44 overflow-hidden bg-slate-100 sm:h-48">
@@ -118,7 +119,7 @@ export default function Home() {
               </div>
 
               {/* Content */}
-              <div className="p-4 sm:p-5">
+              <div className="flex flex-1 flex-col p-4 sm:p-5">
                 <h3 className="text-lg font-semibold text-slate-900 truncate">
                   {market.name || 'Mercado'}
                 </h3>
@@ -140,9 +141,13 @@ export default function Home() {
                   )}
                 </div>
 
-                <div className="mt-4 flex items-center gap-1 text-sm font-medium text-emerald-600 group-hover:gap-2 transition-all">
+                {/* Spacer to push CTA to bottom */}
+                <div className="flex-1" />
+
+                {/* CTA */}
+                <div className="mt-4 inline-flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50/50 px-4 py-2 text-sm font-medium text-emerald-700 transition group-hover:border-emerald-300 group-hover:bg-emerald-100">
                   Ver produtos
-                  <ChevronRight size={14} />
+                  <ChevronRight size={14} className="transition group-hover:translate-x-0.5" />
                 </div>
               </div>
             </Link>

@@ -39,8 +39,9 @@ interface Market {
 
 function ProductPlaceholder() {
   return (
-    <div className="flex h-full items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-50">
-      <Store size={36} className="text-emerald-300" />
+    <div className="flex h-full flex-col items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-50 gap-1">
+      <Store size={32} className="text-emerald-300" />
+      <span className="text-[10px] font-medium text-emerald-400/60">Sem imagem</span>
     </div>
   );
 }
