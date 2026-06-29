@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { ShoppingCart, MapPin, Phone, Clock, Store, ChevronRight } from 'lucide-react';
@@ -40,13 +40,13 @@ interface Market {
 export default function MarketPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [market, setMarket] = useState<Market | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [addingId, setAddingId] = useState<string | null>(null);
+  const [addedId, setAddedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -94,7 +94,8 @@ export default function MarketPage() {
     try {
       setAddingId(productId);
       await api.post('/cart/items', { productId, quantity: 1 });
-      navigate('/cart');
+      setAddedId(productId);
+      setTimeout(() => setAddedId(null), 2000);
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Erro ao adicionar ao carrinho';
       alert(msg);
@@ -328,10 +329,18 @@ export default function MarketPage() {
                       <button
                         onClick={() => handleAddToCart(product.id)}
                         disabled={addingId === product.id}
-                        className="w-full bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
+                        className={`w-full py-2 rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50 ${
+                          addedId === product.id
+                            ? 'bg-green-600 text-white'
+                            : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                        }`}
                       >
                         <ShoppingCart size={18} />
-                        {addingId === product.id ? 'Adicionando...' : 'Adicionar ao Carrinho'}
+                        {addingId === product.id
+                          ? 'Adicionando...'
+                          : addedId === product.id
+                          ? '✓ Adicionado!'
+                          : 'Adicionar ao Carrinho'}
                       </button>
                     )}
 
