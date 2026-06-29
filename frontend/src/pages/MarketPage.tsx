@@ -271,13 +271,13 @@ export default function MarketPage() {
               <p>Nenhum produto disponível no momento</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {filteredProducts.map(product => (
                 <div
                   key={product.id}
                   className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition"
                 >
-                  <div className="h-48 bg-gray-200 relative">
+                  <div className="h-36 sm:h-48 bg-gray-200 relative">
                     {product.imageUrl ? (
                       <img
                         src={product.imageUrl}
@@ -305,21 +305,21 @@ export default function MarketPage() {
                     )}
                   </div>
 
-                  <div className="p-4">
-                    <h3 className="font-semibold text-lg text-gray-900 mb-1">
+                  <div className="p-3 sm:p-4">
+                    <h3 className="font-semibold text-base sm:text-lg text-gray-900 mb-1 truncate">
                       {product.name}
                     </h3>
                     {product.description && (
-                      <p className="text-sm text-gray-500 mb-2 line-clamp-2">
+                      <p className="text-xs sm:text-sm text-gray-500 mb-2 line-clamp-2">
                         {product.description}
                       </p>
                     )}
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-2xl font-bold text-emerald-600">
+                      <span className="text-lg sm:text-2xl font-bold text-emerald-600">
                         R$ {product.price.toFixed(2)}
                       </span>
                       {product.stock > 0 && (
-                        <span className="text-sm text-gray-500">
+                        <span className="text-xs sm:text-sm text-gray-500">
                           {product.stock} em estoque
                         </span>
                       )}

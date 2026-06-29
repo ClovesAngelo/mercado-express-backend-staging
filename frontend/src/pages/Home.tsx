@@ -64,27 +64,27 @@ export default function Home() {
         </div>
       )}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {[1,2,3].map(i => (
-            <div key={`skeleton-${i}`} className="bg-white rounded-xl shadow-sm h-48 animate-pulse" />
+            <div key={`skeleton-${i}`} className="bg-white rounded-xl shadow-sm h-36 sm:h-48 animate-pulse" />
           ))}
         </div>
       ) : markets.length === 0 ? (
-        <div className="text-center py-16">
-          <Store size={64} className="mx-auto text-gray-300 mb-4" />
-          <p className="text-gray-500 text-lg">
+        <div className="text-center py-12 sm:py-16">
+          <Store size={48} className="mx-auto text-gray-300 mb-4 sm:size-64" />
+          <p className="text-gray-500 text-base sm:text-lg">
             {user ? 'Nenhum mercado disponível' : 'Faça login para conseguir verificar os mercados disponíveis'}
           </p>
         </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {markets.map(market => (
               <Link
                 key={market.id}
                 to={`/markets/${market.id}`}
                 className="bg-white rounded-xl shadow-sm hover:shadow-md transition overflow-hidden group"
               >
-                <div className="h-48 bg-gray-200 relative overflow-hidden">
+                <div className="h-36 sm:h-48 bg-gray-200 relative overflow-hidden">
                   {market.imageUrl ? (
                     <img
                       src={market.imageUrl}
@@ -110,12 +110,12 @@ export default function Home() {
                     </div>
                   )}
                 </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-lg text-gray-900 mb-1">
+                <div className="p-3 sm:p-4">
+                  <h3 className="font-semibold text-base sm:text-lg text-gray-900 mb-1 truncate">
                     {market.name || 'Mercado'}
                   </h3>
                   {market.description && (
-                    <p className="text-gray-600 text-sm mb-2 line-clamp-2">
+                    <p className="text-gray-600 text-xs sm:text-sm mb-2 line-clamp-2">
                       {market.description}
                     </p>
                   )}
