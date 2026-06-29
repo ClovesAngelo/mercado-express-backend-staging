@@ -15,12 +15,23 @@ interface Market {
 }
 
 export default function Home() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    // Aguardar auth carregar antes de decidir
+    if (authLoading) return;
+
+    // Se não está logado, não chama API — mostra mensagem direta
+    if (!user) {
+      setMarkets([]);
+      setLoading(false);
+      setErrorMsg(null);
+      return;
+    }
+
     api.get('/markets')
       .then(({ data }) => {
         setMarkets(Array.isArray(data) ? data : []);
@@ -28,7 +39,6 @@ export default function Home() {
       })
       .catch((error) => {
         const status = error.response?.status;
-        const isAuthError = status === 401 || status === 403;
 
         console.error('[Home] Erro ao carregar mercados:', {
           status,
@@ -37,14 +47,10 @@ export default function Home() {
         });
 
         setMarkets([]);
-        setErrorMsg(
-          isAuthError
-            ? 'Você não tem permissão para ver mercados no momento.'
-            : 'Não foi possível carregar os mercados. Tente novamente mais tarde.'
-        );
+        setErrorMsg('Não foi possível carregar os mercados. Tente novamente mais tarde.');
         setLoading(false);
       });
-  }, []);
+  }, [authLoading, user]);
 
   return (
     <div>
