@@ -1,5 +1,6 @@
-import { IsString, IsOptional, IsNumber, IsBoolean, Min, IsArray, ValidateNested } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsBoolean, Min, IsArray, ValidateNested, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
+import { FulfillmentType, PaymentMethod } from '@prisma/client';
 
 class OrderItemDto {
   @IsString()
@@ -31,6 +32,10 @@ export class CreateOrderDto {
 
   @IsString()
   @IsOptional()
+  customerPhone?: string;
+
+  @IsString()
+  @IsOptional()
   zipCode?: string;
 
   @IsString()
@@ -51,19 +56,15 @@ export class CreateOrderDto {
 
   @IsString()
   @IsOptional()
-  city?: string;
-
-  @IsString()
-  @IsOptional()
-  state?: string;
-
-  @IsString()
-  @IsOptional()
   reference?: string;
 
-  @IsString()
+  @IsEnum(FulfillmentType)
   @IsOptional()
-  paymentMethod?: string;
+  fulfillmentType?: FulfillmentType;
+
+  @IsEnum(PaymentMethod)
+  @IsOptional()
+  paymentMethod?: PaymentMethod;
 
   @IsBoolean()
   @IsOptional()

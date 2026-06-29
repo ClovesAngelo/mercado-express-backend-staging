@@ -217,6 +217,17 @@ describe('MarketsService', () => {
           isActive: true,
           createdAt: true,
           updatedAt: true,
+          acceptsDelivery: true,
+          acceptsPickup: true,
+          deliveryStartTime: true,
+          deliveryEndTime: true,
+          pickupInstructions: true,
+          deliveryInstructions: true,
+          pixEnabled: true,
+          pixKey: true,
+          pixKeyType: true,
+          pixRecipientName: true,
+          pixInstructions: true,
         },
       });
     });

@@ -120,6 +120,17 @@ export class MarketsService {
         isActive: true,
         createdAt: true,
         updatedAt: true,
+        acceptsDelivery: true,
+        acceptsPickup: true,
+        deliveryStartTime: true,
+        deliveryEndTime: true,
+        pickupInstructions: true,
+        deliveryInstructions: true,
+        pixEnabled: true,
+        pixKey: true,
+        pixKeyType: true,
+        pixRecipientName: true,
+        pixInstructions: true,
       },
     });
   }
@@ -140,7 +151,29 @@ export class MarketsService {
   async update(id: string, data: any, user: any) {
     // Gestor só pode atualizar campos específicos
     if (user.role === 'GESTOR_MERCADO') {
-      const allowedFields = ['name', 'description', 'phone', 'address', 'imageUrl', 'whatsapp', 'openTime', 'closeTime', 'logoUrl', 'bannerUrl'];
+      const allowedFields = [
+        'name',
+        'description',
+        'phone',
+        'address',
+        'imageUrl',
+        'whatsapp',
+        'openTime',
+        'closeTime',
+        'logoUrl',
+        'bannerUrl',
+        'acceptsDelivery',
+        'acceptsPickup',
+        'deliveryStartTime',
+        'deliveryEndTime',
+        'pickupInstructions',
+        'deliveryInstructions',
+        'pixEnabled',
+        'pixKey',
+        'pixKeyType',
+        'pixRecipientName',
+        'pixInstructions',
+      ];
       const filteredData = Object.keys(data)
         .filter(key => allowedFields.includes(key))
         .reduce((acc, key) => ({ ...acc, [key]: data[key] }), {});

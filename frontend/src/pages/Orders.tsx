@@ -23,7 +23,9 @@ interface Order {
   city: string;
   state: string;
   reference?: string;
-  paymentMethod: string;
+  paymentMethod?: string;
+  paymentStatus?: string;
+  fulfillmentType?: string;
   needsChange: boolean;
   changeFor?: number;
   items?: OrderItem[] | null;
@@ -38,9 +40,14 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
 };
 
 const paymentMethodLabels: Record<string, string> = {
-  pix: 'PIX',
-  cash: 'Dinheiro',
-  card: 'Cartão',
+  PIX: 'PIX',
+  DINHEIRO_NA_ENTREGA: 'Dinheiro',
+  CARTAO_NA_ENTREGA: 'Cartão',
+};
+
+const fulfillmentTypeLabels: Record<string, string> = {
+  DELIVERY: 'Entrega',
+  PICKUP: 'Retirada',
 };
 
 export default function Orders() {
@@ -119,15 +126,31 @@ export default function Orders() {
                       <span className="font-medium">{order.reference}</span>
                     </div>
                   )}
+                  {order.fulfillmentType && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Tipo</span>
+                      <span className="font-medium">
+                        {fulfillmentTypeLabels[order.fulfillmentType] || order.fulfillmentType}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-500">Pagamento</span>
                     <span className="font-medium">
-                      {paymentMethodLabels[order.paymentMethod] || order.paymentMethod}
-                      {order.paymentMethod === 'cash' && order.needsChange && order.changeFor && (
+                      {paymentMethodLabels[order.paymentMethod || ''] || order.paymentMethod}
+                      {order.paymentMethod === 'DINHEIRO_NA_ENTREGA' && order.needsChange && order.changeFor && (
                         <span className="text-emerald-600"> (troco para R$ {order.changeFor.toFixed(2)})</span>
                       )}
                     </span>
                   </div>
+                  {order.paymentStatus && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Status pagamento</span>
+                      <span className="font-medium">
+                        {order.paymentStatus === 'PENDING' ? 'Pendente' : 'Confirmado'}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="border-t mt-4 pt-4 flex justify-between font-bold text-lg">

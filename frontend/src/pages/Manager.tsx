@@ -70,6 +70,17 @@ interface MarketInfo {
   bannerUrl?: string;
   openTime?: string;
   closeTime?: string;
+  acceptsDelivery?: boolean;
+  acceptsPickup?: boolean;
+  deliveryStartTime?: string;
+  deliveryEndTime?: string;
+  pickupInstructions?: string;
+  deliveryInstructions?: string;
+  pixEnabled?: boolean;
+  pixKey?: string;
+  pixKeyType?: string;
+  pixRecipientName?: string;
+  pixInstructions?: string;
 }
 
 export default function Manager() {
@@ -96,6 +107,17 @@ export default function Manager() {
     bannerUrl: '',
     openTime: '',
     closeTime: '',
+    acceptsDelivery: true,
+    acceptsPickup: true,
+    deliveryStartTime: '',
+    deliveryEndTime: '',
+    pickupInstructions: '',
+    deliveryInstructions: '',
+    pixEnabled: false,
+    pixKey: '',
+    pixKeyType: '',
+    pixRecipientName: '',
+    pixInstructions: '',
   });
   const [stockData, setStockData] = useState({
     quantity: 0,
@@ -243,6 +265,17 @@ export default function Manager() {
       bannerUrl: marketInfo.bannerUrl || '',
       openTime: marketInfo.openTime || '',
       closeTime: marketInfo.closeTime || '',
+      acceptsDelivery: marketInfo.acceptsDelivery ?? true,
+      acceptsPickup: marketInfo.acceptsPickup ?? true,
+      deliveryStartTime: marketInfo.deliveryStartTime || '',
+      deliveryEndTime: marketInfo.deliveryEndTime || '',
+      pickupInstructions: marketInfo.pickupInstructions || '',
+      deliveryInstructions: marketInfo.deliveryInstructions || '',
+      pixEnabled: marketInfo.pixEnabled ?? false,
+      pixKey: marketInfo.pixKey || '',
+      pixKeyType: marketInfo.pixKeyType || '',
+      pixRecipientName: marketInfo.pixRecipientName || '',
+      pixInstructions: marketInfo.pixInstructions || '',
     });
     setShowEditModal(true);
   };
@@ -824,6 +857,148 @@ export default function Manager() {
                   className="w-full border rounded px-3 py-2"
                   rows={3}
                 />
+              </div>
+
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-3 text-gray-700">Entrega e Retirada</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="acceptsDelivery"
+                      checked={editFormData.acceptsDelivery}
+                      onChange={(e) => setEditFormData({ ...editFormData, acceptsDelivery: e.target.checked })}
+                      className="rounded text-emerald-600"
+                    />
+                    <label htmlFor="acceptsDelivery" className="text-sm font-medium text-gray-700">
+                      Aceita entrega
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="acceptsPickup"
+                      checked={editFormData.acceptsPickup}
+                      onChange={(e) => setEditFormData({ ...editFormData, acceptsPickup: e.target.checked })}
+                      className="rounded text-emerald-600"
+                    />
+                    <label htmlFor="acceptsPickup" className="text-sm font-medium text-gray-700">
+                      Aceita retirada no mercado
+                    </label>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Horário início entrega
+                    </label>
+                    <input
+                      type="time"
+                      value={editFormData.deliveryStartTime}
+                      onChange={(e) => setEditFormData({ ...editFormData, deliveryStartTime: e.target.value })}
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Horário fim entrega
+                    </label>
+                    <input
+                      type="time"
+                      value={editFormData.deliveryEndTime}
+                      onChange={(e) => setEditFormData({ ...editFormData, deliveryEndTime: e.target.value })}
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Instruções de retirada
+                    </label>
+                    <textarea
+                      value={editFormData.pickupInstructions}
+                      onChange={(e) => setEditFormData({ ...editFormData, pickupInstructions: e.target.value })}
+                      className="w-full border rounded px-3 py-2"
+                      rows={2}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Instruções de entrega
+                    </label>
+                    <textarea
+                      value={editFormData.deliveryInstructions}
+                      onChange={(e) => setEditFormData({ ...editFormData, deliveryInstructions: e.target.value })}
+                      className="w-full border rounded px-3 py-2"
+                      rows={2}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-3 text-gray-700">Pagamento Pix</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="pixEnabled"
+                      checked={editFormData.pixEnabled}
+                      onChange={(e) => setEditFormData({ ...editFormData, pixEnabled: e.target.checked })}
+                      className="rounded text-emerald-600"
+                    />
+                    <label htmlFor="pixEnabled" className="text-sm font-medium text-gray-700">
+                      Ativar Pix
+                    </label>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tipo da chave
+                    </label>
+                    <select
+                      value={editFormData.pixKeyType}
+                      onChange={(e) => setEditFormData({ ...editFormData, pixKeyType: e.target.value })}
+                      className="w-full border rounded px-3 py-2"
+                    >
+                      <option value="">Selecione...</option>
+                      <option value="CPF">CPF</option>
+                      <option value="CNPJ">CNPJ</option>
+                      <option value="EMAIL">E-mail</option>
+                      <option value="PHONE">Telefone</option>
+                      <option value="RANDOM">Chave aleatória</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Chave Pix
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.pixKey}
+                      onChange={(e) => setEditFormData({ ...editFormData, pixKey: e.target.value })}
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nome do recebedor
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.pixRecipientName}
+                      onChange={(e) => setEditFormData({ ...editFormData, pixRecipientName: e.target.value })}
+                      className="w-full border rounded px-3 py-2"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Instruções para pagamento
+                    </label>
+                    <textarea
+                      value={editFormData.pixInstructions}
+                      onChange={(e) => setEditFormData({ ...editFormData, pixInstructions: e.target.value })}
+                      className="w-full border rounded px-3 py-2"
+                      rows={2}
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3">

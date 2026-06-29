@@ -13,6 +13,23 @@ enum UserRole {
   CLIENTE
 }
 
+enum FulfillmentType {
+  DELIVERY
+  PICKUP
+}
+
+enum PaymentMethod {
+  PIX
+  DINHEIRO_NA_ENTREGA
+  CARTAO_NA_ENTREGA
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
 model User {
   id        String    @id @default(uuid())
   email     String    @unique
@@ -55,8 +72,21 @@ model Market {
   orders          Order[]
   deliveryAreas   DeliveryArea[]
   ratings         Rating[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  // Configuração de entrega/retirada
+  acceptsDelivery       Boolean  @default(true)
+  acceptsPickup         Boolean  @default(true)
+  deliveryStartTime     String?
+  deliveryEndTime       String?
+  pickupInstructions    String?
+  deliveryInstructions  String?
+  // Configuração Pix
+  pixEnabled           Boolean  @default(false)
+  pixKey               String?
+  pixKeyType           String?
+  pixRecipientName     String?
+  pixInstructions      String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model DeliveryArea {
@@ -125,33 +155,35 @@ model CartItem {
 }
 
 model Order {
-  id            String      @id @default(uuid())
-  userId        String
-  user          User        @relation(fields: [userId], references: [id], onDelete: Restrict)
-  marketId      String
-  market        Market      @relation(fields: [marketId], references: [id], onDelete: Restrict)
-  status        String      @default("PENDING")
-  total         Float
-  deliveryFee   Float       @default(0)
-  customerName  String?
-  customerPhone String?
-  zipCode       String?
-  street        String?
-  number        String?
-  complement    String?
-  neighborhood  String?
-  city          String?
-  state         String?
-  reference     String?
-  paymentMethod String?
-  needsChange   Boolean?
-  changeFor     Float?
-  viewedByManager Boolean   @default(false)
-  deletedAt     DateTime?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  items         OrderItem[]
-  rating        Rating?
+  id              String        @id @default(uuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  marketId        String
+  market          Market        @relation(fields: [marketId], references: [id], onDelete: Restrict)
+  status          String        @default("PENDING")
+  total           Float
+  deliveryFee     Float         @default(0)
+  customerName    String?
+  customerPhone   String?
+  zipCode         String?
+  street          String?
+  number          String?
+  complement      String?
+  neighborhood    String?
+  city            String?       @default("Várzea Nova")
+  state           String?       @default("BA")
+  reference       String?
+  paymentMethod   PaymentMethod?
+  paymentStatus   PaymentStatus @default(PENDING)
+  fulfillmentType FulfillmentType @default(DELIVERY)
+  needsChange     Boolean?
+  changeFor       Float?
+  viewedByManager Boolean       @default(false)
+  deletedAt       DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  items           OrderItem[]
+  rating          Rating?
 }
 
 model OrderItem {

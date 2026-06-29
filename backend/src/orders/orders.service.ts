@@ -1,12 +1,26 @@
-import { Injectable, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { FulfillmentType, PaymentMethod } from '@prisma/client';
 
 @Injectable()
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
 
   constructor(private prisma: PrismaService) {}
+
+  private isWithinDeliveryTime(market: any): boolean {
+    if (!market.deliveryStartTime || !market.deliveryEndTime) {
+      return true;
+    }
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    const [startH, startM] = market.deliveryStartTime.split(':').map(Number);
+    const [endH, endM] = market.deliveryEndTime.split(':').map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    return currentTime >= startMinutes && currentTime <= endMinutes;
+  }
 
   async create(userId: string, items: Array<{ productId: string; quantity: number; price: number }>, checkoutData?: CreateOrderDto) {
     this.logger.log(`Creating order for user ${userId} with ${items.length} items`);
@@ -22,21 +36,48 @@ export class OrdersService {
       throw new ForbiddenException('Produto não encontrado');
     }
 
+    const market = firstProduct.market;
+    const fulfillmentType = checkoutData?.fulfillmentType || FulfillmentType.DELIVERY;
+    const paymentMethod = checkoutData?.paymentMethod || PaymentMethod.DINHEIRO_NA_ENTREGA;
+
+    if (fulfillmentType === FulfillmentType.DELIVERY && !market.acceptsDelivery) {
+      throw new BadRequestException('Este mercado não aceita entrega. Escolha retirada no mercado.');
+    }
+
+    if (fulfillmentType === FulfillmentType.PICKUP && !market.acceptsPickup) {
+      throw new BadRequestException('Este mercado não aceita retirada. Escolha entrega.');
+    }
+
+    if (fulfillmentType === FulfillmentType.DELIVERY && !this.isWithinDeliveryTime(market)) {
+      throw new BadRequestException('Entrega indisponível neste horário. Retirada ainda disponível.');
+    }
+
+    if (paymentMethod === PaymentMethod.PIX && !market.pixEnabled) {
+      throw new BadRequestException('Este mercado não aceita pagamento via PIX no momento.');
+    }
+
+    if (paymentMethod === PaymentMethod.PIX && (!market.pixKey || !market.pixRecipientName)) {
+      throw new BadRequestException('Mercado não possui dados Pix configurados. Escolha outra forma de pagamento.');
+    }
+
     const order = await this.prisma.order.create({
       data: {
         userId,
-        marketId: firstProduct.marketId,
+        marketId: market.id,
         total,
         customerName: checkoutData?.customerName,
+        customerPhone: checkoutData?.customerPhone,
         zipCode: checkoutData?.zipCode,
         street: checkoutData?.street,
         number: checkoutData?.number,
         complement: checkoutData?.complement,
         neighborhood: checkoutData?.neighborhood,
-        city: checkoutData?.city,
-        state: checkoutData?.state,
+        city: 'Várzea Nova',
+        state: 'BA',
         reference: checkoutData?.reference,
-        paymentMethod: checkoutData?.paymentMethod,
+        fulfillmentType,
+        paymentMethod,
+        paymentStatus: paymentMethod === PaymentMethod.PIX ? 'PENDING' : 'CONFIRMED',
         needsChange: checkoutData?.needsChange,
         changeFor: checkoutData?.changeFor,
         items: {
@@ -59,6 +100,7 @@ export class OrdersService {
             },
           },
         },
+        market: true,
       },
     });
 
