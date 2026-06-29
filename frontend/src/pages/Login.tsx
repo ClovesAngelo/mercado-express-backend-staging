@@ -22,50 +22,58 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8">
-        <div className="flex flex-col items-center mb-8">
-          <Store size={48} className="text-emerald-600 mb-2" />
-          <h1 className="text-2xl font-bold text-gray-900">Mercado Express</h1>
-          <p className="text-gray-500">Faça login para continuar</p>
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className="w-full max-w-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+          <div className="mb-8 flex flex-col items-center">
+            <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100">
+              <Store size={28} className="text-emerald-600" />
+            </div>
+            <h1 className="text-xl font-bold text-slate-900">Mercado Express</h1>
+            <p className="mt-1 text-sm text-slate-500">Faça login para continuar</p>
+          </div>
+          {error && (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                placeholder="seu@email.com"
+                required
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Senha</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+                placeholder="Sua senha"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 active:bg-emerald-800"
+            >
+              Entrar
+            </button>
+          </form>
+          <p className="mt-6 text-center text-sm text-slate-500">
+            Não tem conta?{' '}
+            <Link to="/register" className="font-medium text-emerald-600 transition hover:text-emerald-700">
+              Cadastre-se
+            </Link>
+          </p>
         </div>
-        {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">{error}</div>
-        )}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-emerald-600 text-white py-2.5 rounded-lg font-medium hover:bg-emerald-700 transition"
-          >
-            Entrar
-          </button>
-        </form>
-        <p className="text-center mt-6 text-sm text-gray-500">
-          Não tem conta?{' '}
-          <Link to="/register" className="text-emerald-600 font-medium hover:underline">
-            Cadastre-se
-          </Link>
-        </p>
       </div>
     </div>
   );

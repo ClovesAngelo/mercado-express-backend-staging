@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
-import { ShoppingCart, MapPin, Phone, Clock, Store, ChevronRight } from 'lucide-react';
+import { ShoppingCart, MapPin, Phone, Clock, Store, ChevronLeft } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -35,6 +35,14 @@ interface Market {
   openTime: string;
   closeTime: string;
   isActive: boolean;
+}
+
+function ProductPlaceholder() {
+  return (
+    <div className="flex h-full items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-50">
+      <Store size={36} className="text-emerald-300" />
+    </div>
+  );
 }
 
 export default function MarketPage() {
@@ -73,21 +81,21 @@ export default function MarketPage() {
 
   const isMarketOpen = () => {
     if (!market?.openTime || !market?.closeTime) return true;
-    
+
     const now = new Date();
     const currentTime = now.getHours() * 60 + now.getMinutes();
-    
+
     const [openHour, openMinute] = market.openTime.split(':').map(Number);
     const [closeHour, closeMinute] = market.closeTime.split(':').map(Number);
-    
+
     const openTime = openHour * 60 + openMinute;
     const closeTime = closeHour * 60 + closeMinute;
-    
+
     return currentTime >= openTime && currentTime <= closeTime;
   };
 
-  const filteredProducts = selectedCategory === 'all' 
-    ? products 
+  const filteredProducts = selectedCategory === 'all'
+    ? products
     : products.filter(p => p.categoryId === selectedCategory);
 
   const handleAddToCart = async (productId: string) => {
@@ -113,16 +121,17 @@ export default function MarketPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Carregando...</div>
-      </div>
+      <div className="py-12 text-center text-slate-500">Carregando...</div>
     );
   }
 
   if (!market) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center text-red-600">Mercado não encontrado</div>
+      <div className="py-12 text-center">
+        <p className="text-red-600">Mercado não encontrado</p>
+        <Link to="/" className="mt-4 inline-flex items-center gap-1 text-sm text-emerald-600 hover:underline">
+          <ChevronLeft size={14} /> Voltar
+        </Link>
       </div>
     );
   }
@@ -133,89 +142,90 @@ export default function MarketPage() {
     <div>
       {/* Banner */}
       {market.bannerUrl && (
-        <div className="relative h-64 md:h-96 w-full overflow-hidden">
+        <div className="relative h-48 w-full overflow-hidden rounded-2xl sm:h-64">
           <img
             src={market.bannerUrl}
             alt={market.name}
-            className="w-full h-full object-cover"
+            className="h-full w-full object-cover"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
         </div>
       )}
 
       {/* Header do Mercado */}
-      <div className="bg-white shadow-md">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-start gap-6">
+      <div className={`${market.bannerUrl ? '-mt-10 relative z-10' : 'mt-0'} mb-6`}>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex items-start gap-4 sm:gap-6">
             {/* Logo */}
-            <div className="w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden shadow-lg flex-shrink-0">
+            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-slate-200 sm:h-24 sm:w-24">
               {market.logoUrl ? (
                 <img
                   src={market.logoUrl}
                   alt={market.name}
-                  className="w-full h-full object-cover"
+                  className="h-full w-full object-cover"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                     (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
                   }}
                 />
               ) : (
-                <div className="w-full h-full bg-emerald-100 flex items-center justify-center">
-                  <Store size={48} className="text-emerald-400" />
+                <div className="flex h-full items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-50">
+                  <Store size={32} className="text-emerald-400" />
                 </div>
               )}
             </div>
 
             {/* Informações */}
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-bold text-slate-900 sm:text-2xl truncate">
                 {market.name}
               </h1>
-              
+
               {market.description && (
-                <p className="text-gray-600 mb-3">{market.description}</p>
+                <p className="mt-1 text-sm text-slate-500">{market.description}</p>
               )}
 
-              <div className="space-y-2">
+              <div className="mt-3 space-y-1.5">
                 {market.address && (
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <MapPin size={18} />
-                    <span>{market.address}</span>
+                  <div className="flex items-center gap-1.5 text-sm text-slate-500">
+                    <MapPin size={14} className="shrink-0 text-slate-400" />
+                    <span className="truncate">{market.address}</span>
                   </div>
                 )}
 
                 {market.phone && (
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Phone size={18} />
+                  <div className="flex items-center gap-1.5 text-sm text-slate-500">
+                    <Phone size={14} className="shrink-0 text-slate-400" />
                     <span>{market.phone}</span>
                   </div>
                 )}
 
                 {market.openTime && market.closeTime && (
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Clock size={18} />
+                  <div className="flex items-center gap-1.5 text-sm text-slate-500">
+                    <Clock size={14} className="shrink-0 text-slate-400" />
                     <span>
                       {formatTime(market.openTime)} às {formatTime(market.closeTime)}
                     </span>
                   </div>
                 )}
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 pt-1">
                   <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
                       isOpen
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-red-100 text-red-700'
                     }`}
                   >
-                    {isOpen ? '🟢 Aberto' : '🔴 Fechado'}
+                    <span className={`h-1.5 w-1.5 rounded-full ${isOpen ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                    {isOpen ? 'Aberto agora' : 'Fechado'}
                   </span>
                   {!market.isActive && (
-                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-                      Desativado pelo admin
+                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">
+                      Desativado
                     </span>
                   )}
                 </div>
@@ -226,18 +236,18 @@ export default function MarketPage() {
       </div>
 
       {/* Categorias e Produtos */}
-      <div className="container mx-auto px-4 py-8">
+      <div>
         {/* Categorias */}
         {categories.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-4">Categorias</h2>
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-3">Categorias</h2>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setSelectedCategory('all')}
-                className={`px-4 py-2 rounded-lg font-medium transition ${
+                className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
                   selectedCategory === 'all'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 Todos
@@ -246,10 +256,10 @@ export default function MarketPage() {
                 <button
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
-                  className={`px-4 py-2 rounded-lg font-medium transition ${
+                  className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
                     selectedCategory === category.id
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                   }`}
                 >
                   {category.name}
@@ -261,98 +271,100 @@ export default function MarketPage() {
 
         {/* Produtos */}
         <div>
-          <h2 className="text-2xl font-bold mb-4">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">
             {selectedCategory === 'all' ? 'Todos os Produtos' : 'Produtos da Categoria'}
           </h2>
 
           {filteredProducts.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <Store size={64} className="mx-auto mb-4 text-gray-300" />
-              <p>Nenhum produto disponível no momento</p>
+            <div className="py-12 text-center">
+              <Store size={48} className="mx-auto mb-4 text-slate-300" />
+              <p className="text-slate-500">Nenhum produto disponível no momento</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filteredProducts.map(product => (
                 <div
                   key={product.id}
-                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition"
+                  className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
                 >
-                  <div className="h-36 sm:h-48 bg-gray-200 relative">
+                  <div className="relative h-40 overflow-hidden bg-slate-100 sm:h-44">
                     {product.imageUrl ? (
                       <img
                         src={product.imageUrl}
                         alt={product.name}
-                        className="w-full h-full object-cover"
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                       />
                     ) : (
-                      <div className="h-full bg-emerald-100 flex items-center justify-center">
-                        <Store size={48} className="text-emerald-400" />
-                      </div>
+                      <ProductPlaceholder />
                     )}
                     {product.stock === 0 && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[1px]">
+                        <span className="rounded-full bg-slate-900/80 px-3 py-1 text-xs font-medium text-white">
                           Sem estoque
                         </span>
                       </div>
                     )}
                     {product.stock > 0 && product.stock <= 10 && (
-                      <div className="absolute top-2 right-2">
-                        <span className="bg-yellow-500 text-white px-2 py-1 rounded text-xs font-medium">
+                      <div className="absolute right-2 top-2">
+                        <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
                           Últimas unidades
                         </span>
                       </div>
                     )}
                   </div>
 
-                  <div className="p-3 sm:p-4">
-                    <h3 className="font-semibold text-base sm:text-lg text-gray-900 mb-1 truncate">
+                  <div className="p-4">
+                    <h3 className="text-base font-semibold text-slate-900 truncate">
                       {product.name}
                     </h3>
                     {product.description && (
-                      <p className="text-xs sm:text-sm text-gray-500 mb-2 line-clamp-2">
+                      <p className="mt-1 text-xs text-slate-500 line-clamp-2">
                         {product.description}
                       </p>
                     )}
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-lg sm:text-2xl font-bold text-emerald-600">
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-lg font-bold text-emerald-600">
                         R$ {product.price.toFixed(2)}
                       </span>
                       {product.stock > 0 && (
-                        <span className="text-xs sm:text-sm text-gray-500">
+                        <span className="text-xs text-slate-400">
                           {product.stock} em estoque
                         </span>
                       )}
                     </div>
 
-                    {user && product.stock > 0 && (
-                      <button
-                        onClick={() => handleAddToCart(product.id)}
-                        disabled={addingId === product.id}
-                        className={`w-full py-2 rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50 ${
-                          addedId === product.id
-                            ? 'bg-green-600 text-white'
-                            : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                        }`}
-                      >
-                        <ShoppingCart size={18} />
-                        {addingId === product.id
-                          ? 'Adicionando...'
-                          : addedId === product.id
-                          ? '✓ Adicionado!'
-                          : 'Adicionar ao Carrinho'}
-                      </button>
-                    )}
-
-                    {!user && (
-                      <Link
-                        to="/login"
-                        className="w-full bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 transition flex items-center justify-center gap-2"
-                      >
-                        <ShoppingCart size={18} />
-                        Faça login para comprar
-                      </Link>
-                    )}
+                    <div className="mt-3">
+                      {user && product.stock > 0 ? (
+                        <button
+                          onClick={() => handleAddToCart(product.id)}
+                          disabled={addingId === product.id}
+                          className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70 ${
+                            addedId === product.id
+                              ? 'bg-emerald-600'
+                              : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800'
+                          }`}
+                        >
+                          <ShoppingCart size={15} />
+                          {addingId === product.id
+                            ? 'Adicionando...'
+                            : addedId === product.id
+                              ? '✓ Adicionado!'
+                              : 'Adicionar ao Carrinho'}
+                        </button>
+                      ) : user && product.stock === 0 ? (
+                        <div className="flex w-full items-center justify-center rounded-xl bg-slate-100 px-4 py-2 text-sm font-medium text-slate-400">
+                          Indisponível
+                        </div>
+                      ) : (
+                        <Link
+                          to="/login"
+                          className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                        >
+                          <ShoppingCart size={15} />
+                          Faça login
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
