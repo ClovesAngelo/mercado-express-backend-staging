@@ -119,17 +119,14 @@ export default function Checkout() {
 
   function getMarketIdFromCart(cartData: CartData): string | null {
     const firstItem = cartData?.items?.[0] as any;
-    const candidates = {
-      cartMarketId: cartData?.marketId,
-      itemMarketId: firstItem?.marketId,
-      productMarketId: firstItem?.product?.marketId,
-      productMarketId2: firstItem?.product?.market?.id,
-      productId: firstItem?.productId,
-      productIdAlt: firstItem?.product?.id,
-    };
-    const marketId = Object.values(candidates).find((v) => typeof v === 'string' && v.length > 0) ?? null;
-    console.log('[Checkout] getMarketIdFromCart candidates:', candidates, '=>', marketId);
-    return marketId;
+    return (
+      firstItem?.product?.marketId ??
+      firstItem?.product?.market?.id ??
+      firstItem?.marketId ??
+      firstItem?.market?.id ??
+      cartData?.marketId ??
+      null
+    );
   }
 
   function normalizeMarketForCheckout(market: MarketData): MarketData {
@@ -145,6 +142,8 @@ export default function Checkout() {
   useEffect(() => {
     const fetchMarketConfig = async () => {
       const marketId = getMarketIdFromCart(cart);
+      
+      console.log('[Checkout] fetchMarketConfig marketId:', marketId);
       
       if (!marketId) {
         setMarketError('Não foi possível identificar o mercado do carrinho.');
@@ -228,7 +227,7 @@ export default function Checkout() {
     };
 
     fetchMarketConfig();
-  }, [cart.marketId]);
+  }, [cart]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
