@@ -126,27 +126,13 @@ describe('MarketsService', () => {
   });
 
   describe('findAll', () => {
-    it('should return all markets with products, managers and availability', async () => {
-      const now = new Date();
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
-      const [openH, openM] = mockMarket.openTime.split(':').map(Number);
-      const [closeH, closeM] = mockMarket.closeTime.split(':').map(Number);
-      const openMinutes = openH * 60 + openM;
-      const closeMinutes = closeH * 60 + closeM;
-      const isOpen = currentMinutes >= openMinutes && currentMinutes <= closeMinutes;
-
-      const marketWithAvailability = {
-        ...mockMarket,
-        isOpenNow: isOpen,
-        deliveryAvailableNow: isOpen,
-        pickupAvailableNow: isOpen,
-        unavailableReason: isOpen ? null : 'Fora do horário de funcionamento',
-      };
-      prisma.market.findMany.mockResolvedValue([marketWithAvailability]);
+    it('should return all markets with products and managers', async () => {
+      prisma.market.findMany.mockResolvedValue([mockMarket]);
 
       const result = await marketsService.findAll();
 
-      expect(result).toEqual([marketWithAvailability]);
+      // Backend retorna dados brutos, disponibilidade é calculada no frontend
+      expect(result).toEqual([mockMarket]);
       expect(prisma.market.findMany).toHaveBeenCalledWith({
         include: {
           products: true,
@@ -225,14 +211,9 @@ describe('MarketsService', () => {
 
       const result = await marketsService.findOnePublic('market-1');
 
-      const expected = {
-        ...publicFields,
-        isOpenNow: true,
-        deliveryAvailableNow: true,
-        pickupAvailableNow: true,
-        unavailableReason: null,
-      };
-      expect(result).toEqual(expected);
+      // Backend agora retorna apenas dados brutos
+      // Disponibilidade é calculada no frontend usando horário do dispositivo
+      expect(result).toEqual(publicFields);
       expect(prisma.market.findUnique).toHaveBeenCalledWith({
         where: { id: 'market-1' },
         select: {

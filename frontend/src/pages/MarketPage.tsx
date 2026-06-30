@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { ShoppingCart, MapPin, Phone, Clock, Store, ChevronLeft } from 'lucide-react';
+import { calculateMarketAvailability, type MarketData } from '../utils/marketAvailability';
 
 interface Product {
   id: string;
@@ -23,7 +24,7 @@ interface Category {
   name: string;
 }
 
-interface Market {
+interface Market extends MarketData {
   id: string;
   name: string;
   address: string;
@@ -32,9 +33,6 @@ interface Market {
   whatsapp: string;
   logoUrl: string;
   bannerUrl: string;
-  openTime: string;
-  closeTime: string;
-  isActive: boolean;
   isOpenNow?: boolean;
   deliveryAvailableNow?: boolean;
   pickupAvailableNow?: boolean;
@@ -85,7 +83,9 @@ export default function MarketPage() {
   };
 
   const isMarketOpen = () => {
-    return market?.isOpenNow ?? true;
+    if (!market) return false;
+    const availability = calculateMarketAvailability(market);
+    return availability.isOpenNow;
   };
 
   const filteredProducts = selectedCategory === 'all'

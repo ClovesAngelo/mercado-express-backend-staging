@@ -3,18 +3,19 @@ import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { Store, MapPin, Phone, ChevronRight } from 'lucide-react';
+import { calculateMarketAvailability, type MarketData } from '../utils/marketAvailability';
 
-interface Market {
+interface Market extends MarketData {
   id: string;
   name: string;
   address: string;
   imageUrl: string | null;
-  isActive: boolean;
   description?: string;
   phone?: string;
   isOpenNow?: boolean;
   deliveryAvailableNow?: boolean;
   pickupAvailableNow?: boolean;
+  unavailableReason?: string | null;
 }
 
 function MarketPlaceholder() {
@@ -44,7 +45,11 @@ export default function Home() {
 
     api.get('/markets')
       .then(({ data }) => {
-        setMarkets(Array.isArray(data) ? data : []);
+        const marketsWithAvailability = (Array.isArray(data) ? data : []).map((market: MarketData & { id: string; name: string; address: string; imageUrl: string | null; description?: string; phone?: string }) => ({
+          ...market,
+          ...calculateMarketAvailability(market),
+        }));
+        setMarkets(marketsWithAvailability);
         setLoading(false);
       })
       .catch((error) => {

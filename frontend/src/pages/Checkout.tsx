@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { ArrowLeft, CreditCard, Wallet, Smartphone, CheckCircle, Loader2, Truck, Store } from 'lucide-react';
+import { calculateMarketAvailability, type MarketData } from '../utils/marketAvailability';
 
 interface CartItem {
   id: string;
@@ -24,21 +25,19 @@ interface CartData {
 type FulfillmentType = 'DELIVERY' | 'PICKUP';
 type PaymentMethod = 'PIX' | 'DINHEIRO_NA_ENTREGA' | 'CARTAO_NA_ENTREGA';
 
-interface MarketConfig {
-  isOpenNow: boolean;
-  deliveryAvailableNow: boolean;
-  pickupAvailableNow: boolean;
+interface MarketConfig extends MarketData {
+  isOpenNow?: boolean;
+  deliveryAvailableNow?: boolean;
+  pickupAvailableNow?: boolean;
   unavailableReason?: string | null;
-  acceptsDelivery: boolean;
-  acceptsPickup: boolean;
-  deliveryStartTime?: string;
-  deliveryEndTime?: string;
   pixEnabled: boolean;
   pixKey?: string;
   pixKeyType?: string;
   pixRecipientName?: string;
   pixInstructions?: string;
   whatsapp?: string;
+  address?: string;
+  pickupInstructions?: string;
 }
 
 export default function Checkout() {
@@ -112,32 +111,32 @@ export default function Checkout() {
       try {
         const response = await api.get(`/markets/${cart.marketId}`);
         const market = response.data;
+        
+        // Calcular disponibilidade no frontend usando horário do dispositivo
+        const availability = calculateMarketAvailability(market);
+        
         const config: MarketConfig = {
-          isOpenNow: market.isOpenNow ?? true,
-          deliveryAvailableNow: market.deliveryAvailableNow ?? false,
-          pickupAvailableNow: market.pickupAvailableNow ?? false,
-          unavailableReason: market.unavailableReason || null,
-          acceptsDelivery: market.acceptsDelivery ?? true,
-          acceptsPickup: market.acceptsPickup ?? true,
-          deliveryStartTime: market.deliveryStartTime,
-          deliveryEndTime: market.deliveryEndTime,
+          ...market,
+          ...availability,
           pixEnabled: market.pixEnabled ?? false,
           pixKey: market.pixKey,
           pixKeyType: market.pixKeyType,
           pixRecipientName: market.pixRecipientName,
           pixInstructions: market.pixInstructions,
           whatsapp: market.whatsapp,
+          address: market.address,
+          pickupInstructions: market.pickupInstructions,
         };
         setMarketConfig(config);
 
-        // Usar disponibilidade calculada pelo backend
-        setDeliveryUnavailable(!config.deliveryAvailableNow);
+        // Usar disponibilidade calculada pelo frontend (horário do dispositivo)
+        setDeliveryUnavailable(!availability.deliveryAvailableNow);
 
-        if (!config.deliveryAvailableNow && config.pickupAvailableNow) {
+        if (!availability.deliveryAvailableNow && availability.pickupAvailableNow) {
           setFulfillmentType('PICKUP');
-        } else if (!config.acceptsDelivery && config.pickupAvailableNow) {
+        } else if (!market.acceptsDelivery && availability.pickupAvailableNow) {
           setFulfillmentType('PICKUP');
-        } else if (config.deliveryAvailableNow) {
+        } else if (availability.deliveryAvailableNow) {
           setFulfillmentType('DELIVERY');
         }
 
@@ -352,70 +351,91 @@ export default function Checkout() {
             </div>
           </div>
 
-          {/* Endereço de Entrega */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="font-semibold text-lg mb-4">Endereço de Entrega</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">CEP *</label>
-                <input
-                  type="text"
-                  value={zipCode}
-                  onChange={(e) => setZipCode(e.target.value)}
-                  required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Rua *</label>
-                <input
-                  type="text"
-                  value={street}
-                  onChange={(e) => setStreet(e.target.value)}
-                  required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Número *</label>
-                <input
-                  type="text"
-                  value={number}
-                  onChange={(e) => setNumber(e.target.value)}
-                  required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Complemento</label>
-                <input
-                  type="text"
-                  value={complement}
-                  onChange={(e) => setComplement(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Bairro *</label>
-                <input
-                  type="text"
-                  value={neighborhood}
-                  onChange={(e) => setNeighborhood(e.target.value)}
-                  required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Ponto de Referência</label>
-                <input
-                  type="text"
-                  value={reference}
-                  onChange={(e) => setReference(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
+          {/* Endereço de Entrega ou Informações de Retirada */}
+          {fulfillmentType === 'DELIVERY' ? (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="font-semibold text-lg mb-4">Endereço de Entrega</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">CEP *</label>
+                  <input
+                    type="text"
+                    value={zipCode}
+                    onChange={(e) => setZipCode(e.target.value)}
+                    required
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Rua *</label>
+                  <input
+                    type="text"
+                    value={street}
+                    onChange={(e) => setStreet(e.target.value)}
+                    required
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Número *</label>
+                  <input
+                    type="text"
+                    value={number}
+                    onChange={(e) => setNumber(e.target.value)}
+                    required
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Complemento</label>
+                  <input
+                    type="text"
+                    value={complement}
+                    onChange={(e) => setComplement(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Bairro *</label>
+                  <input
+                    type="text"
+                    value={neighborhood}
+                    onChange={(e) => setNeighborhood(e.target.value)}
+                    required
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ponto de Referência</label>
+                  <input
+                    type="text"
+                    value={reference}
+                    onChange={(e) => setReference(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="font-semibold text-lg mb-4">Endereço do Mercado</h2>
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Retire seu pedido no endereço:</strong>
+                </p>
+                <p className="text-sm text-blue-700 mt-2">
+                  {marketConfig?.address || 'Endereço não informado'}
+                </p>
+                {marketConfig?.pickupInstructions && (
+                  <div className="mt-3 p-3 bg-white rounded border border-blue-200">
+                    <p className="text-sm text-gray-700">
+                      <strong>Instruções:</strong> {marketConfig.pickupInstructions}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Forma de Pagamento */}
           <div className="bg-white rounded-xl shadow-sm p-6">
