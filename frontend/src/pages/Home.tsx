@@ -12,6 +12,9 @@ interface Market {
   isActive: boolean;
   description?: string;
   phone?: string;
+  isOpenNow?: boolean;
+  deliveryAvailableNow?: boolean;
+  pickupAvailableNow?: boolean;
 }
 
 function MarketPlaceholder() {
@@ -102,17 +105,17 @@ export default function Home() {
                 ) : (
                   <MarketPlaceholder />
                 )}
-                {market.isActive !== undefined && (
+                {market.isOpenNow !== undefined && (
                   <div className="absolute right-2 top-2">
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-sm ${
-                        market.isActive
+                        market.isOpenNow
                           ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-slate-100 text-slate-500'
+                          : 'bg-red-100 text-red-700'
                       }`}
                     >
-                      <span className={`h-1.5 w-1.5 rounded-full ${market.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                      {market.isActive ? 'Aberto' : 'Fechado'}
+                      <span className={`h-1.5 w-1.5 rounded-full ${market.isOpenNow ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                      {market.isOpenNow ? 'Aberto' : 'Fechado'}
                     </span>
                   </div>
                 )}

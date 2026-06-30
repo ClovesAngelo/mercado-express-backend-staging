@@ -25,6 +25,10 @@ type FulfillmentType = 'DELIVERY' | 'PICKUP';
 type PaymentMethod = 'PIX' | 'DINHEIRO_NA_ENTREGA' | 'CARTAO_NA_ENTREGA';
 
 interface MarketConfig {
+  isOpenNow: boolean;
+  deliveryAvailableNow: boolean;
+  pickupAvailableNow: boolean;
+  unavailableReason?: string | null;
   acceptsDelivery: boolean;
   acceptsPickup: boolean;
   deliveryStartTime?: string;
@@ -109,6 +113,10 @@ export default function Checkout() {
         const response = await api.get(`/markets/${cart.marketId}`);
         const market = response.data;
         const config: MarketConfig = {
+          isOpenNow: market.isOpenNow ?? true,
+          deliveryAvailableNow: market.deliveryAvailableNow ?? false,
+          pickupAvailableNow: market.pickupAvailableNow ?? false,
+          unavailableReason: market.unavailableReason || null,
           acceptsDelivery: market.acceptsDelivery ?? true,
           acceptsPickup: market.acceptsPickup ?? true,
           deliveryStartTime: market.deliveryStartTime,
@@ -122,24 +130,14 @@ export default function Checkout() {
         };
         setMarketConfig(config);
 
-        // Ajustar opções disponíveis conforme configuração e horário
-        const now = new Date();
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
-        let deliveryAvailable = config.acceptsDelivery;
-        if (deliveryAvailable && config.deliveryStartTime && config.deliveryEndTime) {
-          const [startH, startM] = config.deliveryStartTime.split(':').map(Number);
-          const [endH, endM] = config.deliveryEndTime.split(':').map(Number);
-          const startMinutes = startH * 60 + startM;
-          const endMinutes = endH * 60 + endM;
-          deliveryAvailable = currentMinutes >= startMinutes && currentMinutes <= endMinutes;
-        }
-        setDeliveryUnavailable(!deliveryAvailable);
+        // Usar disponibilidade calculada pelo backend
+        setDeliveryUnavailable(!config.deliveryAvailableNow);
 
-        if (!deliveryAvailable && config.acceptsPickup) {
+        if (!config.deliveryAvailableNow && config.pickupAvailableNow) {
           setFulfillmentType('PICKUP');
-        } else if (!config.acceptsDelivery && config.acceptsPickup) {
+        } else if (!config.acceptsDelivery && config.pickupAvailableNow) {
           setFulfillmentType('PICKUP');
-        } else if (config.acceptsDelivery) {
+        } else if (config.deliveryAvailableNow) {
           setFulfillmentType('DELIVERY');
         }
 
@@ -298,8 +296,13 @@ export default function Checkout() {
           {/* Tipo de Atendimento */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="font-semibold text-lg mb-4">Tipo de Atendimento</h2>
+            {!marketConfig?.isOpenNow && marketConfig?.unavailableReason && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 mb-4">
+                {marketConfig.unavailableReason}
+              </div>
+            )}
             <div className="space-y-3">
-              {marketConfig?.acceptsDelivery && !deliveryUnavailable && (
+              {marketConfig?.deliveryAvailableNow && (
                 <label className="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
                   <input
                     type="radio"
@@ -317,7 +320,7 @@ export default function Checkout() {
                 </label>
               )}
 
-              {marketConfig?.acceptsPickup && (
+              {marketConfig?.pickupAvailableNow && (
                 <label className="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
                   <input
                     type="radio"
@@ -335,13 +338,13 @@ export default function Checkout() {
                 </label>
               )}
 
-              {deliveryUnavailable && (
+              {deliveryUnavailable && marketConfig?.pickupAvailableNow && (
                 <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-                  Entrega indisponível neste horário. Retirada ainda disponível.
+                  Entrega indisponível neste horário. Você ainda pode escolher retirada.
                 </div>
               )}
 
-              {!marketConfig?.acceptsDelivery && !marketConfig?.acceptsPickup && (
+              {!marketConfig?.deliveryAvailableNow && !marketConfig?.pickupAvailableNow && marketConfig?.isOpenNow && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
                   Nenhuma forma de atendimento disponível no momento. Tente novamente mais tarde.
                 </div>

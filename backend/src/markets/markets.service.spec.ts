@@ -43,6 +43,10 @@ describe('MarketsService', () => {
     manager: null,
     createdAt: new Date(),
     updatedAt: new Date(),
+    acceptsDelivery: true,
+    acceptsPickup: true,
+    openTime: '08:00',
+    closeTime: '22:00',
   };
 
   describe('create', () => {
@@ -122,12 +126,27 @@ describe('MarketsService', () => {
   });
 
   describe('findAll', () => {
-    it('should return all markets with products and managers', async () => {
-      prisma.market.findMany.mockResolvedValue([mockMarket]);
+    it('should return all markets with products, managers and availability', async () => {
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const [openH, openM] = mockMarket.openTime.split(':').map(Number);
+      const [closeH, closeM] = mockMarket.closeTime.split(':').map(Number);
+      const openMinutes = openH * 60 + openM;
+      const closeMinutes = closeH * 60 + closeM;
+      const isOpen = currentMinutes >= openMinutes && currentMinutes <= closeMinutes;
+
+      const marketWithAvailability = {
+        ...mockMarket,
+        isOpenNow: isOpen,
+        deliveryAvailableNow: isOpen,
+        pickupAvailableNow: isOpen,
+        unavailableReason: isOpen ? null : 'Fora do horário de funcionamento',
+      };
+      prisma.market.findMany.mockResolvedValue([marketWithAvailability]);
 
       const result = await marketsService.findAll();
 
-      expect(result).toEqual([mockMarket]);
+      expect(result).toEqual([marketWithAvailability]);
       expect(prisma.market.findMany).toHaveBeenCalledWith({
         include: {
           products: true,
@@ -190,12 +209,30 @@ describe('MarketsService', () => {
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
+        acceptsDelivery: true,
+        acceptsPickup: true,
+        deliveryStartTime: null,
+        deliveryEndTime: null,
+        pickupInstructions: null,
+        deliveryInstructions: null,
+        pixEnabled: false,
+        pixKey: null,
+        pixKeyType: null,
+        pixRecipientName: null,
+        pixInstructions: null,
       };
       prisma.market.findUnique.mockResolvedValue(publicFields);
 
       const result = await marketsService.findOnePublic('market-1');
 
-      expect(result).toEqual(publicFields);
+      const expected = {
+        ...publicFields,
+        isOpenNow: true,
+        deliveryAvailableNow: true,
+        pickupAvailableNow: true,
+        unavailableReason: null,
+      };
+      expect(result).toEqual(expected);
       expect(prisma.market.findUnique).toHaveBeenCalledWith({
         where: { id: 'market-1' },
         select: {

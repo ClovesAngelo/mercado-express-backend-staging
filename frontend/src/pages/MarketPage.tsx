@@ -35,6 +35,10 @@ interface Market {
   openTime: string;
   closeTime: string;
   isActive: boolean;
+  isOpenNow?: boolean;
+  deliveryAvailableNow?: boolean;
+  pickupAvailableNow?: boolean;
+  unavailableReason?: string | null;
 }
 
 function ProductPlaceholder() {
@@ -81,18 +85,7 @@ export default function MarketPage() {
   };
 
   const isMarketOpen = () => {
-    if (!market?.openTime || !market?.closeTime) return true;
-
-    const now = new Date();
-    const currentTime = now.getHours() * 60 + now.getMinutes();
-
-    const [openHour, openMinute] = market.openTime.split(':').map(Number);
-    const [closeHour, closeMinute] = market.closeTime.split(':').map(Number);
-
-    const openTime = openHour * 60 + openMinute;
-    const closeTime = closeHour * 60 + closeMinute;
-
-    return currentTime >= openTime && currentTime <= closeTime;
+    return market?.isOpenNow ?? true;
   };
 
   const filteredProducts = selectedCategory === 'all'
@@ -141,6 +134,13 @@ export default function MarketPage() {
 
   return (
     <div>
+      {/* Status Banner */}
+      {!isOpen && market.unavailableReason && (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {market.unavailableReason}
+        </div>
+      )}
+
       {/* Banner */}
       {market.bannerUrl && (
         <div className="relative h-48 w-full overflow-hidden rounded-2xl sm:h-64">

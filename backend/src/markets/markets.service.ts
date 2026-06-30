@@ -61,7 +61,7 @@ export class MarketsService {
   }
 
   async findAll() {
-    return this.prisma.market.findMany({
+    const markets = await this.prisma.market.findMany({
       include: {
         products: true,
         managers: {
@@ -71,6 +71,11 @@ export class MarketsService {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    return markets.map(market => ({
+      ...market,
+      ...this.getMarketAvailability(market),
+    }));
   }
 
   async findAllWithManager() {
@@ -98,8 +103,51 @@ export class MarketsService {
     });
   }
 
+  private isWithinTimeRange(timeStr: string | null, startStr: string | null, endStr: string | null): boolean {
+    if (!timeStr || !startStr || !endStr) return true;
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const [startH, startM] = startStr.split(':').map(Number);
+    const [endH, endM] = endStr.split(':').map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+  }
+
+  private getMarketAvailability(market: any) {
+    const isActive = market.isActive ?? false;
+    const openTime = market.openTime;
+    const closeTime = market.closeTime;
+    const acceptsDelivery = market.acceptsDelivery ?? false;
+    const acceptsPickup = market.acceptsPickup ?? false;
+    const deliveryStartTime = market.deliveryStartTime;
+    const deliveryEndTime = market.deliveryEndTime;
+
+    const isOpenNow = isActive && this.isWithinTimeRange(openTime, openTime, closeTime);
+    const deliveryAvailableNow = isOpenNow && acceptsDelivery && this.isWithinTimeRange(deliveryStartTime, deliveryStartTime, deliveryEndTime);
+    const pickupAvailableNow = isOpenNow && acceptsPickup;
+
+    let unavailableReason: string | null = null;
+    if (!isActive) {
+      unavailableReason = 'Mercado desativado';
+    } else if (!isOpenNow) {
+      unavailableReason = 'Fora do horário de funcionamento';
+    } else if (!acceptsDelivery && !acceptsPickup) {
+      unavailableReason = 'Nenhuma forma de atendimento disponível';
+    } else if (!deliveryAvailableNow && !pickupAvailableNow) {
+      unavailableReason = 'Nenhuma forma de atendimento disponível no momento';
+    }
+
+    return {
+      isOpenNow,
+      deliveryAvailableNow,
+      pickupAvailableNow,
+      unavailableReason,
+    };
+  }
+
   async findOnePublic(id: string) {
-    return this.prisma.market.findUnique({
+    const market = await this.prisma.market.findUnique({
       where: { id },
       select: {
         id: true,
@@ -133,6 +181,15 @@ export class MarketsService {
         pixInstructions: true,
       },
     });
+
+    if (!market) return null;
+
+    const availability = this.getMarketAvailability(market);
+
+    return {
+      ...market,
+      ...availability,
+    };
   }
 
   async setActive(id: string, isActive: boolean) {
