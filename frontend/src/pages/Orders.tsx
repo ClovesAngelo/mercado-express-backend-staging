@@ -5,7 +5,7 @@ import { Package, Clock, CheckCircle, Truck, XCircle } from 'lucide-react';
 interface OrderItem {
   id: string;
   quantity: number;
-  price: number;
+  productPrice: number;
   product: { name: string };
 }
 
@@ -34,7 +34,9 @@ interface Order {
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   PENDING: { label: 'Pendente', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
   CONFIRMED: { label: 'Confirmado', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
+  PREPARING: { label: 'Preparando', color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
   OUT_FOR_DELIVERY: { label: 'Saiu para entrega', color: 'bg-purple-100 text-purple-800', icon: Truck },
+  DELIVERING: { label: 'Entregando', color: 'bg-purple-100 text-purple-800', icon: Truck },
   DELIVERED: { label: 'Entregue', color: 'bg-green-100 text-green-800', icon: CheckCircle },
   CANCELLED: { label: 'Cancelado', color: 'bg-red-100 text-red-800', icon: XCircle },
 };
@@ -55,13 +57,23 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/orders/my').then(({ data }) => {
-      setOrders(Array.isArray(data) ? data : []);
-      setLoading(false);
-    }).catch(() => {
-      setOrders([]);
-      setLoading(false);
-    });
+    const fetchOrders = async () => {
+      try {
+        const { data } = await api.get('/orders/my');
+        setOrders(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error('Erro ao buscar pedidos:', error);
+        setOrders([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+
+    const interval = setInterval(fetchOrders, 15000);
+
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) return <div className="animate-pulse space-y-4">{[1,2].map(i => <div key={i} className="h-32 bg-gray-200 rounded" />)}</div>;
@@ -100,7 +112,7 @@ export default function Orders() {
                   {items.map(item => (
                     <div key={item.id} className="flex justify-between text-sm">
                       <span>{item.product?.name || 'Produto'} x{item.quantity ?? 0}</span>
-                      <span className="text-gray-600">R$ {((item.price ?? 0) * (item.quantity ?? 0)).toFixed(2)}</span>
+                      <span className="text-gray-600">R$ {((item.productPrice ?? 0) * (item.quantity ?? 0)).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>

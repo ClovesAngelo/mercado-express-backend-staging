@@ -29,7 +29,7 @@ interface Category {
 interface OrderItem {
   id: string;
   quantity: number;
-  price: number;
+  productPrice: number;
   product: {
     id: string;
     name: string;
@@ -299,7 +299,7 @@ export default function Manager() {
   };
 
   const calculateOrderTotal = (order: Order) => {
-    return order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    return order.items.reduce((sum, item) => sum + (item.productPrice * item.quantity), 0);
   };
 
   const formatCurrency = (value: number) => {
@@ -644,8 +644,8 @@ export default function Manager() {
                       <h4 className="text-lg font-semibold mb-4">Itens do Pedido</h4>
                       
                       <div className="space-y-3 mb-4">
-                        {order.items.map((item, index) => {
-                          const subtotal = item.price * item.quantity;
+                      {order.items.map((item, index) => {
+                          const subtotal = item.productPrice * item.quantity;
                           return (
                             <div key={item.id} className="bg-white p-4 rounded border border-gray-200">
                               <div className="flex justify-between items-start">
@@ -662,7 +662,7 @@ export default function Manager() {
                                     <strong>Quantidade:</strong> {item.quantity}
                                   </p>
                                   <p className="text-sm text-gray-600">
-                                    <strong>Preço unitário:</strong> {formatCurrency(item.price)}
+                                    <strong>Preço unitário:</strong> {formatCurrency(item.productPrice)}
                                   </p>
                                 </div>
                                 <div className="text-right ml-4">
