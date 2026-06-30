@@ -77,6 +77,14 @@ export default function Checkout() {
     mountedRef.current = true;
     api.get('/cart').then(({ data }) => {
       console.log('[Checkout] Cart loaded:', data);
+      console.log('[Checkout] Cart structure:', {
+        hasMarketId: !!data?.marketId,
+        itemsCount: data?.items?.length,
+        firstItemKeys: data?.items?.[0] ? Object.keys(data.items[0]) : [],
+        firstProductKeys: data?.items?.[0]?.product ? Object.keys(data.items[0].product) : [],
+        firstProductMarketId: data?.items?.[0]?.product?.marketId,
+        firstProductMarket: data?.items?.[0]?.product?.market,
+      });
       if (mountedRef.current) {
         setCart(data || {});
         setLoading(false);
@@ -441,7 +449,7 @@ export default function Checkout() {
           </div>
 
           {/* Endereço de Entrega ou Informações de Retirada */}
-          {fulfillmentType === 'DELIVERY' ? (
+          {fulfillmentType === 'DELIVERY' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="font-semibold text-lg mb-4">Endereço de Entrega</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -505,7 +513,9 @@ export default function Checkout() {
                 </div>
               </div>
             </div>
-          ) : (
+          )}
+
+          {fulfillmentType === 'PICKUP' && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="font-semibold text-lg mb-4">Endereço do Mercado</h2>
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -523,6 +533,13 @@ export default function Checkout() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {fulfillmentType === null && (
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="font-semibold text-lg mb-4">Endereço</h2>
+              <p className="text-sm text-gray-600">Escolha uma forma de atendimento para continuar.</p>
             </div>
           )}
 

@@ -12,9 +12,25 @@ export class CartService {
         items: {
           include: {
             product: {
-              include: {
-                market: true,
-                category: true,
+              select: {
+                id: true,
+                name: true,
+                price: true,
+                imageUrl: true,
+                stock: true,
+                marketId: true,
+                market: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+                category: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
