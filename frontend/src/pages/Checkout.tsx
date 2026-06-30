@@ -119,13 +119,17 @@ export default function Checkout() {
 
   function getMarketIdFromCart(cartData: CartData): string | null {
     const firstItem = cartData?.items?.[0] as any;
-    return (
-      cartData?.marketId ??
-      firstItem?.marketId ??
-      firstItem?.product?.marketId ??
-      firstItem?.product?.market?.id ??
-      null
-    );
+    const candidates = {
+      cartMarketId: cartData?.marketId,
+      itemMarketId: firstItem?.marketId,
+      productMarketId: firstItem?.product?.marketId,
+      productMarketId2: firstItem?.product?.market?.id,
+      productId: firstItem?.productId,
+      productIdAlt: firstItem?.product?.id,
+    };
+    const marketId = Object.values(candidates).find((v) => typeof v === 'string' && v.length > 0) ?? null;
+    console.log('[Checkout] getMarketIdFromCart candidates:', candidates, '=>', marketId);
+    return marketId;
   }
 
   function normalizeMarketForCheckout(market: MarketData): MarketData {
@@ -270,6 +274,8 @@ export default function Checkout() {
       setSubmitting(false);
     }
   };
+
+  const isSubmitDisabled = submitting || loading || !market || !!marketError || !fulfillmentType;
 
   if (loading) return <div className="animate-pulse"><div className="h-96 bg-gray-200 rounded" /></div>;
 
