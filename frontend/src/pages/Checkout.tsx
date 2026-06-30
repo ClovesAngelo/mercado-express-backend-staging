@@ -386,6 +386,10 @@ export default function Checkout() {
               <p>deliveryAvailableNow: {String(marketConfig?.deliveryAvailableNow ?? 'null')}</p>
               <p>pickupAvailableNow: {String(marketConfig?.pickupAvailableNow ?? 'null')}</p>
               <p>fulfillmentType: {fulfillmentType ?? 'null'}</p>
+              <p className="font-semibold mt-2">CART STRUCTURE:</p>
+              <pre className="whitespace-pre-wrap break-all">
+                {JSON.stringify(cart?.items?.[0], null, 2)}
+              </pre>
             </div>
           )}
 
