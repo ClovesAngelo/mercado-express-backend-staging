@@ -112,8 +112,23 @@ export default function Checkout() {
         const response = await api.get(`/markets/${cart.marketId}`);
         const market = response.data;
         
+        console.log('[Checkout] Market data received:', {
+          name: market.name,
+          isActive: market.isActive,
+          openTime: market.openTime,
+          closeTime: market.closeTime,
+          acceptsDelivery: market.acceptsDelivery,
+          acceptsPickup: market.acceptsPickup,
+          deliveryStartTime: market.deliveryStartTime,
+          deliveryEndTime: market.deliveryEndTime,
+          address: market.address,
+          pickupInstructions: market.pickupInstructions,
+        });
+        
         // Calcular disponibilidade no frontend usando horário do dispositivo
         const availability = calculateMarketAvailability(market);
+        
+        console.log('[Checkout] Availability calculated:', availability);
         
         const config: MarketConfig = {
           ...market,
@@ -132,12 +147,19 @@ export default function Checkout() {
         // Usar disponibilidade calculada pelo frontend (horário do dispositivo)
         setDeliveryUnavailable(!availability.deliveryAvailableNow);
 
-        if (!availability.deliveryAvailableNow && availability.pickupAvailableNow) {
-          setFulfillmentType('PICKUP');
-        } else if (!market.acceptsDelivery && availability.pickupAvailableNow) {
-          setFulfillmentType('PICKUP');
-        } else if (availability.deliveryAvailableNow) {
+        // Seleção automática de fulfillment type
+        if (availability.deliveryAvailableNow && availability.pickupAvailableNow) {
           setFulfillmentType('DELIVERY');
+        } else if (availability.deliveryAvailableNow && !availability.pickupAvailableNow) {
+          setFulfillmentType('DELIVERY');
+        } else if (!availability.deliveryAvailableNow && availability.pickupAvailableNow) {
+          setFulfillmentType('PICKUP');
+        } else if (availability.isOpenNow && !availability.deliveryAvailableNow && !availability.pickupAvailableNow) {
+          // Mercado aberto mas sem opções configuradas - padrão para retirada
+          setFulfillmentType('PICKUP');
+        } else {
+          // Mercado fechado ou sem disponibilidade
+          setFulfillmentType('PICKUP');
         }
 
         if (config.pixEnabled) {

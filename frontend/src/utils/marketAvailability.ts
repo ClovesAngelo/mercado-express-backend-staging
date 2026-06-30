@@ -45,8 +45,8 @@ export function calculateMarketAvailability(market: MarketData): MarketAvailabil
   const isActive = market.isActive ?? false;
   const openTime = market.openTime;
   const closeTime = market.closeTime;
-  const acceptsDelivery = market.acceptsDelivery ?? false;
-  const acceptsPickup = market.acceptsPickup ?? false;
+  const acceptsDelivery = market.acceptsDelivery ?? true; // default true se não configurado
+  const acceptsPickup = market.acceptsPickup ?? true; // default true se não configurado
   const deliveryStartTime = market.deliveryStartTime;
   const deliveryEndTime = market.deliveryEndTime;
 
@@ -59,8 +59,6 @@ export function calculateMarketAvailability(market: MarketData): MarketAvailabil
     unavailableReason = 'Mercado desativado';
   } else if (!isOpenNow) {
     unavailableReason = 'Fora do horário de funcionamento';
-  } else if (!acceptsDelivery && !acceptsPickup) {
-    unavailableReason = 'Nenhuma forma de atendimento disponível';
   } else if (!deliveryAvailableNow && !pickupAvailableNow) {
     unavailableReason = 'Nenhuma forma de atendimento disponível no momento';
   }
