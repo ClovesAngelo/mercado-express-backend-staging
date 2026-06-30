@@ -70,7 +70,6 @@ export default function Checkout() {
   const [market, setMarket] = useState<MarketData | null>(null);
   const [marketLoading, setMarketLoading] = useState(false);
   const [marketError, setMarketError] = useState<string | null>(null);
-  const DEBUG_CHECKOUT = true;
 
   useEffect(() => {
     console.log('[Checkout] Component mounted');
@@ -370,33 +369,6 @@ export default function Checkout() {
             </div>
           </div>
 
-          {/* DEBUG CHECKOUT */}
-          {DEBUG_CHECKOUT && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl shadow-sm p-4 text-xs text-gray-800 space-y-1">
-              <p className="font-semibold">DEBUG CHECKOUT</p>
-              <p>cartLoading: {String(loading)}</p>
-              <p>cartItemsCount: {items.length}</p>
-              <p>marketIdExtraido: {cart.marketId ?? 'null'}</p>
-              <p>marketFetchStatus: {marketError ? 'error' : market ? 'success' : 'idle'}</p>
-              <p>marketFetchError: {marketError || 'none'}</p>
-              <p>marketName: {(market as any)?.name || 'null'}</p>
-              <p>marketOpenTime: {market?.openTime || 'null'}</p>
-              <p>marketCloseTime: {market?.closeTime || 'null'}</p>
-              <p>marketIsActive: {String(market?.isActive ?? 'null')}</p>
-              <p>acceptsDelivery: {String(market?.acceptsDelivery ?? 'null')}</p>
-              <p>acceptsPickup: {String(market?.acceptsPickup ?? 'null')}</p>
-              <p>deliveryStartTime: {market?.deliveryStartTime || 'null'}</p>
-              <p>deliveryEndTime: {market?.deliveryEndTime || 'null'}</p>
-              <p>isOpenNow: {String(marketConfig?.isOpenNow ?? 'null')}</p>
-              <p>deliveryAvailableNow: {String(marketConfig?.deliveryAvailableNow ?? 'null')}</p>
-              <p>pickupAvailableNow: {String(marketConfig?.pickupAvailableNow ?? 'null')}</p>
-              <p>fulfillmentType: {fulfillmentType ?? 'null'}</p>
-              <p className="font-semibold mt-2">CART STRUCTURE:</p>
-              <pre className="whitespace-pre-wrap break-all">
-                {JSON.stringify(cart?.items?.[0], null, 2)}
-              </pre>
-            </div>
-          )}
 
           {/* Tipo de Atendimento */}
           <div className="bg-white rounded-xl shadow-sm p-6">
