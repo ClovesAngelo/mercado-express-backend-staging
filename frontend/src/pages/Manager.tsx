@@ -154,7 +154,9 @@ export default function Manager() {
     try {
       await api.patch(`/orders/${orderId}/status`, { status });
       loadData();
-    } catch (error) {
+    } catch (error: any) {
+      const msg = error.response?.data?.message || 'Erro ao atualizar status';
+      alert(msg);
       console.error('Erro ao atualizar status:', error);
     }
   };

@@ -60,6 +60,24 @@ export class OrdersService {
       throw new BadRequestException('Mercado não possui dados Pix configurados. Escolha outra forma de pagamento.');
     }
 
+    // Validar estoque de todos os produtos antes de criar o pedido
+    for (const item of items) {
+      const product = await this.prisma.product.findUnique({
+        where: { id: item.productId },
+      });
+
+      if (!product) {
+        throw new BadRequestException(`O produto ${item.productId || 'desconhecido'} não foi encontrado.`);
+      }
+
+      if (product.stock < item.quantity) {
+        throw new BadRequestException(
+          `O produto ${product.name} não possui estoque suficiente. ` +
+          `Solicitado: ${item.quantity}, Disponível: ${product.stock}`
+        );
+      }
+    }
+
     const order = await this.prisma.order.create({
       data: {
         userId,
@@ -184,7 +202,14 @@ export class OrdersService {
   async updateStatus(id: string, status: string, user: any) {
     const order = await this.prisma.order.findUnique({
       where: { id },
-      include: { market: true },
+      include: {
+        market: true,
+        items: {
+          include: {
+            product: true,
+          },
+        },
+      },
     });
 
     if (!order) {
@@ -195,6 +220,70 @@ export class OrdersService {
       throw new ForbiddenException('Acesso negado: você só pode atualizar pedidos do seu mercado');
     }
 
+    // Se o status for DELIVERED e ainda não foi descontado o estoque
+    if (status === 'DELIVERED' && !order.stockDeductedAt) {
+      // Usar transação para garantir consistência
+      const updatedOrder = await this.prisma.$transaction(async (tx) => {
+        // Verificar estoque novamente dentro da transação
+        for (const item of order.items) {
+          const product = await tx.product.findUnique({
+            where: { id: item.productId },
+          });
+
+          if (!product) {
+            throw new ForbiddenException(
+              `Produto ${item.productName} não encontrado no sistema`
+            );
+          }
+
+          if (product.stock < item.quantity) {
+            throw new BadRequestException(
+              `Não há estoque suficiente para marcar este pedido como entregue. ` +
+              `Produto: ${product.name}. ` +
+              `Solicitado: ${item.quantity}, Disponível: ${product.stock}`
+            );
+          }
+        }
+
+        // Descontar estoque de todos os produtos
+        for (const item of order.items) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: {
+              stock: {
+                decrement: item.quantity,
+              },
+            },
+          });
+        }
+
+        // Atualizar pedido com status e marcação de estoque descontado
+        return tx.order.update({
+          where: { id },
+          data: {
+            status,
+            stockDeductedAt: new Date(),
+          },
+          include: {
+            items: {
+              include: {
+                product: {
+                  include: {
+                    market: true,
+                  },
+                },
+              },
+            },
+            user: true,
+          },
+        });
+      });
+
+      this.logger.log(`Order ${id} marked as DELIVERED and stock deducted`);
+      return updatedOrder;
+    }
+
+    // Se já foi descontado ou não é DELIVERED, apenas atualiza o status
     return this.prisma.order.update({
       where: { id },
       data: { status },

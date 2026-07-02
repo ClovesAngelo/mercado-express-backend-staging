@@ -179,6 +179,7 @@ model Order {
   needsChange     Boolean?
   changeFor       Float?
   viewedByManager Boolean       @default(false)
+  stockDeductedAt DateTime?     // Campo para controlar se o estoque já foi descontado
   deletedAt       DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt

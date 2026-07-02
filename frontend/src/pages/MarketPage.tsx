@@ -58,6 +58,7 @@ export default function MarketPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [addingId, setAddingId] = useState<string | null>(null);
   const [addedId, setAddedId] = useState<string | null>(null);
+  const [productQuantities, setProductQuantities] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (id) {
@@ -92,11 +93,24 @@ export default function MarketPage() {
     ? products
     : products.filter(p => p.categoryId === selectedCategory);
 
+  const getProductQuantity = (productId: string): number => {
+    return productQuantities[productId] || 1;
+  };
+
+  const setProductQuantity = (productId: string, quantity: number) => {
+    setProductQuantities(prev => ({
+      ...prev,
+      [productId]: quantity,
+    }));
+  };
+
   const handleAddToCart = async (productId: string) => {
     try {
+      const quantity = getProductQuantity(productId);
       setAddingId(productId);
-      await api.post('/cart/items', { productId, quantity: 1 });
+      await api.post('/cart/items', { productId, quantity });
       setAddedId(productId);
+      setProductQuantity(productId, 1); // Resetar para 1 após adicionar
       setTimeout(() => setAddedId(null), 2000);
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Erro ao adicionar ao carrinho';
@@ -104,6 +118,20 @@ export default function MarketPage() {
       console.error('[MarketPage] Erro ao adicionar ao carrinho:', err.message);
     } finally {
       setAddingId(null);
+    }
+  };
+
+  const handleIncrementQuantity = (product: Product) => {
+    const currentQty = getProductQuantity(product.id);
+    if (currentQty < product.stock) {
+      setProductQuantity(product.id, currentQty + 1);
+    }
+  };
+
+  const handleDecrementQuantity = (productId: string) => {
+    const currentQty = getProductQuantity(productId);
+    if (currentQty > 1) {
+      setProductQuantity(productId, currentQty - 1);
     }
   };
 
@@ -334,24 +362,53 @@ export default function MarketPage() {
                       )}
                     </div>
 
-                    <div className="mt-3">
+                    <div className="mt-3 space-y-2">
                       {user && product.stock > 0 ? (
-                        <button
-                          onClick={() => handleAddToCart(product.id)}
-                          disabled={addingId === product.id}
-                          className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70 ${
-                            addedId === product.id
-                              ? 'bg-emerald-600'
-                              : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800'
-                          }`}
-                        >
-                          <ShoppingCart size={15} />
-                          {addingId === product.id
-                            ? 'Adicionando...'
-                            : addedId === product.id
-                              ? '✓ Adicionado!'
-                              : 'Adicionar ao Carrinho'}
-                        </button>
+                        <>
+                          <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                            <span className="text-xs font-medium text-slate-600">Quantidade:</span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleDecrementQuantity(product.id)}
+                                disabled={getProductQuantity(product.id) <= 1}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                -
+                              </button>
+                              <span className="w-8 text-center text-sm font-semibold text-slate-900">
+                                {getProductQuantity(product.id)}
+                              </span>
+                              <button
+                                onClick={() => handleIncrementQuantity(product)}
+                                disabled={getProductQuantity(product.id) >= product.stock}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                          {product.stock <= 10 && (
+                            <p className="text-[10px] text-amber-600 font-medium">
+                              Apenas {product.stock} dispon{product.stock === 1 ? 'ível' : 'íveis'}
+                            </p>
+                          )}
+                          <button
+                            onClick={() => handleAddToCart(product.id)}
+                            disabled={addingId === product.id}
+                            className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-70 ${
+                              addedId === product.id
+                                ? 'bg-emerald-600'
+                                : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800'
+                            }`}
+                          >
+                            <ShoppingCart size={15} />
+                            {addingId === product.id
+                              ? 'Adicionando...'
+                              : addedId === product.id
+                                ? '✓ Adicionado!'
+                                : 'Adicionar ao Carrinho'}
+                          </button>
+                        </>
                       ) : user && product.stock === 0 ? (
                         <div className="flex w-full items-center justify-center rounded-xl bg-slate-100 px-4 py-2 text-sm font-medium text-slate-400">
                           Indisponível

@@ -93,11 +93,16 @@ describe('CartService', () => {
         updatedAt: new Date(),
       };
 
+      prisma.product.findUnique.mockResolvedValue(mockProduct);
+      prisma.cart.findUnique.mockResolvedValue(null);
       prisma.cart.upsert.mockResolvedValue(mockCart);
       prisma.cartItem.upsert.mockResolvedValue(mockCartItem);
 
       const result = await cartService.addToCart('user-1', 'product-1', 1);
 
+      expect(prisma.product.findUnique).toHaveBeenCalledWith({
+        where: { id: 'product-1' },
+      });
       expect(prisma.cart.upsert).toHaveBeenCalledWith({
         where: { userId: 'user-1' },
         update: {},
@@ -111,6 +116,26 @@ describe('CartService', () => {
         create: { cartId: 'cart-1', productId: 'product-1', quantity: 1 },
       });
       expect(result).toEqual(mockCartItem);
+    });
+
+    it('should throw error when product not found', async () => {
+      prisma.product.findUnique.mockResolvedValue(null);
+
+      await expect(cartService.addToCart('user-1', 'product-1', 1)).rejects.toThrow('Produto não encontrado');
+    });
+
+    it('should throw error when product is not active', async () => {
+      const inactiveProduct = { ...mockProduct, isActive: false };
+      prisma.product.findUnique.mockResolvedValue(inactiveProduct);
+
+      await expect(cartService.addToCart('user-1', 'product-1', 1)).rejects.toThrow('Produto não está disponível');
+    });
+
+    it('should throw error when quantity exceeds stock', async () => {
+      prisma.product.findUnique.mockResolvedValue(mockProduct);
+      prisma.cart.findUnique.mockResolvedValue(null);
+
+      await expect(cartService.addToCart('user-1', 'product-1', 100)).rejects.toThrow('Quantidade solicitada maior que o estoque disponível');
     });
   });
 

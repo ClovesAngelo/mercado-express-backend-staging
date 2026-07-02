@@ -55,7 +55,43 @@ export class CartService {
   }
 
   async addToCart(userId: string, productId: string, quantity: number) {
-    const cart = await this.prisma.cart.upsert({
+    // Validar quantity
+    if (!quantity || quantity < 1) {
+      throw new Error('Quantidade deve ser maior que zero');
+    }
+
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+    });
+
+    if (!product) {
+      throw new Error('Produto não encontrado');
+    }
+
+    if (!product.isActive) {
+      throw new Error('Produto não está disponível');
+    }
+
+    // Verificar estoque disponível
+    const cart = await this.prisma.cart.findUnique({
+      where: { userId },
+      include: {
+        items: {
+          where: { productId },
+        },
+      },
+    });
+
+    const existingItem = cart?.items.find(item => item.productId === productId);
+    const currentQuantityInCart = existingItem?.quantity || 0;
+    const totalQuantityAfterAdd = currentQuantityInCart + quantity;
+
+    if (product.stock < totalQuantityAfterAdd) {
+      throw new Error(`Quantidade solicitada maior que o estoque disponível. Estoque: ${product.stock}, No carrinho: ${currentQuantityInCart}`);
+    }
+
+    // Criar ou atualizar carrinho
+    const upsertedCart = await this.prisma.cart.upsert({
       where: { userId },
       update: {},
       create: { userId },
@@ -64,7 +100,7 @@ export class CartService {
     return this.prisma.cartItem.upsert({
       where: {
         cartId_productId: {
-          cartId: cart.id,
+          cartId: upsertedCart.id,
           productId,
         },
       },
@@ -72,7 +108,7 @@ export class CartService {
         quantity: { increment: quantity },
       },
       create: {
-        cartId: cart.id,
+        cartId: upsertedCart.id,
         productId,
         quantity,
       },
