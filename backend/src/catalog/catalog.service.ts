@@ -1,5 +1,16 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuthenticatedUser } from '../types/express';
+import {
+  CreateProductDto,
+  UpdateProductDto,
+  UpdateStockDto,
+} from './dto/product.dto';
 
 @Injectable()
 export class CatalogService {
@@ -63,16 +74,53 @@ export class CatalogService {
     });
   }
 
-  async createProduct(createProductDto: any) {
+  private async assertProductAccess(id: string, user: AuthenticatedUser) {
+    const product = await this.prisma.product.findUnique({ where: { id } });
+    if (!product) throw new NotFoundException('Produto não encontrado');
+    if (
+      user.role === UserRole.GESTOR_MERCADO &&
+      product.marketId !== user.marketId
+    ) {
+      throw new ForbiddenException(
+        'Você só pode gerenciar produtos do seu mercado.',
+      );
+    }
+    return product;
+  }
+
+  async createProduct(
+    createProductDto: CreateProductDto,
+    user: AuthenticatedUser,
+  ) {
+    if (user.role === UserRole.GESTOR_MERCADO && !user.marketId) {
+      throw new ForbiddenException('Gestor sem mercado vinculado.');
+    }
+    const { marketId: requestedMarketId, ...productData } = createProductDto;
+    if (user.role === UserRole.ADMIN_GERAL && !requestedMarketId) {
+      throw new ForbiddenException(
+        'O administrador deve informar o mercado do produto.',
+      );
+    }
     return this.prisma.product.create({
-      data: createProductDto,
+      data: {
+        ...productData,
+        marketId:
+          user.role === UserRole.GESTOR_MERCADO
+            ? user.marketId!
+            : requestedMarketId!,
+      },
       include: {
         category: true,
       },
     });
   }
 
-  async updateProduct(id: string, updateProductDto: any) {
+  async updateProduct(
+    id: string,
+    updateProductDto: UpdateProductDto,
+    user: AuthenticatedUser,
+  ) {
+    await this.assertProductAccess(id, user);
     return this.prisma.product.update({
       where: { id },
       data: updateProductDto,
@@ -82,14 +130,20 @@ export class CatalogService {
     });
   }
 
-  async deleteProduct(id: string) {
+  async deleteProduct(id: string, user: AuthenticatedUser) {
+    await this.assertProductAccess(id, user);
     return this.prisma.product.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
   }
 
-  async updateStock(id: string, stockData: { stock: number; minStock: number }) {
+  async updateStock(
+    id: string,
+    stockData: UpdateStockDto,
+    user: AuthenticatedUser,
+  ) {
+    await this.assertProductAccess(id, user);
     return this.prisma.product.update({
       where: { id },
       data: {
@@ -102,7 +156,7 @@ export class CatalogService {
     });
   }
 
-  async createCategory(createCategoryDto: any) {
+  async createCategory(createCategoryDto: Prisma.CategoryUncheckedCreateInput) {
     return this.prisma.category.create({
       data: createCategoryDto,
       include: {
@@ -111,7 +165,10 @@ export class CatalogService {
     });
   }
 
-  async updateCategory(id: string, updateCategoryDto: any) {
+  async updateCategory(
+    id: string,
+    updateCategoryDto: Prisma.CategoryUncheckedUpdateInput,
+  ) {
     return this.prisma.category.update({
       where: { id },
       data: updateCategoryDto,

@@ -1,6 +1,27 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards, Req, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  UseGuards,
+  Req,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
+import type { Request } from 'express';
 import { CartService } from './cart.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+/** Extrai o userId do usuário autenticado anexado pelo JwtStrategy. */
+function getUserId(req: Request): string {
+  const user = req.user;
+  const userId = user?.id ?? user?.sub;
+  if (!userId) throw new Error('UserId not found in token');
+  return userId;
+}
 
 @Controller('cart')
 export class CartController {
@@ -9,64 +30,90 @@ export class CartController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  async getCart(@Req() req: any) {
+  async getCart(@Req() req: Request) {
     try {
-      const userId = req.user?.id || req.user?.sub;
-      if (!userId) throw new Error('UserId not found in token');
-      return await this.cartService.getCart(userId);
+      return await this.cartService.getCart(getUserId(req));
     } catch (error) {
-      this.logger.error(`ERROR fetching cart: ${(error as Error).message}`, (error as Error).stack);
+      if (error instanceof HttpException) throw error;
+      this.logger.error(
+        `ERROR fetching cart: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw new HttpException(
         (error as Error)?.message || 'Erro ao buscar carrinho',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
   @Post('items')
   @UseGuards(JwtAuthGuard)
-  async addToCart(@Req() req: any, @Body() body: { productId: string; quantity: number }) {
+  async addToCart(
+    @Req() req: Request,
+    @Body() body: { productId: string; quantity: number },
+  ) {
     try {
-      const userId = req.user?.id || req.user?.sub;
-      if (!userId) throw new Error('UserId not found in token');
-      return await this.cartService.addToCart(userId, body.productId, body.quantity ?? 1);
+      return await this.cartService.addToCart(
+        getUserId(req),
+        body.productId,
+        body.quantity ?? 1,
+      );
     } catch (error) {
-      this.logger.error(`ERROR adding to cart: ${(error as Error).message}`, (error as Error).stack);
+      if (error instanceof HttpException) throw error;
+      this.logger.error(
+        `ERROR adding to cart: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw new HttpException(
         (error as Error)?.message || 'Erro ao adicionar ao carrinho',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
   @Post('items/:productId')
   @UseGuards(JwtAuthGuard)
-  async updateCartItem(@Req() req: any, @Param('productId') productId: string, @Body() body: { quantity: number }) {
+  async updateCartItem(
+    @Req() req: Request,
+    @Param('productId') productId: string,
+    @Body() body: { quantity: number },
+  ) {
     try {
-      const userId = req.user?.id || req.user?.sub;
-      if (!userId) throw new Error('UserId not found in token');
-      return await this.cartService.updateCartItem(userId, productId, body.quantity);
+      return await this.cartService.updateCartItem(
+        getUserId(req),
+        productId,
+        body.quantity,
+      );
     } catch (error) {
-      this.logger.error(`ERROR updating cart item: ${(error as Error).message}`, (error as Error).stack);
+      if (error instanceof HttpException) throw error;
+      this.logger.error(
+        `ERROR updating cart item: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw new HttpException(
         (error as Error)?.message || 'Erro ao atualizar item do carrinho',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
   @Delete('items/:productId')
   @UseGuards(JwtAuthGuard)
-  async removeFromCart(@Req() req: any, @Param('productId') productId: string) {
+  async removeFromCart(
+    @Req() req: Request,
+    @Param('productId') productId: string,
+  ) {
     try {
-      const userId = req.user?.id || req.user?.sub;
-      if (!userId) throw new Error('UserId not found in token');
-      return await this.cartService.removeFromCart(userId, productId);
+      return await this.cartService.removeFromCart(getUserId(req), productId);
     } catch (error) {
-      this.logger.error(`ERROR removing from cart: ${(error as Error).message}`, (error as Error).stack);
+      if (error instanceof HttpException) throw error;
+      this.logger.error(
+        `ERROR removing from cart: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw new HttpException(
         (error as Error)?.message || 'Erro ao remover item do carrinho',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }

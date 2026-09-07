@@ -1,20 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CartService } from './cart.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { createMockPrismaService } from '../../test/helpers/prisma-mock';
+import {
+  createMockPrismaService,
+  MockedPrismaService,
+} from '../../test/helpers/prisma-mock';
 
 describe('CartService', () => {
   let cartService: CartService;
-  let prisma: jest.Mocked<PrismaService>;
+  let prisma: MockedPrismaService;
 
   beforeEach(async () => {
     prisma = createMockPrismaService();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        CartService,
-        { provide: PrismaService, useValue: prisma },
-      ],
+      providers: [CartService, { provide: PrismaService, useValue: prisma }],
     }).compile();
 
     cartService = module.get<CartService>(CartService);
@@ -27,7 +27,7 @@ describe('CartService', () => {
   const mockProduct = {
     id: 'product-1',
     name: 'Test Product',
-    price: 15.00,
+    price: 15.0,
     description: null,
     imageUrl: null,
     stock: 50,
@@ -70,7 +70,7 @@ describe('CartService', () => {
 
       expect(result).toBeDefined();
       expect(result.items).toHaveLength(1);
-      expect(result.total).toBe(30.00); // 2 * 15.00
+      expect(result.total).toBe(30.0); // 2 * 15.00
     });
 
     it('should return empty cart when no cart exists', async () => {
@@ -121,21 +121,27 @@ describe('CartService', () => {
     it('should throw error when product not found', async () => {
       prisma.product.findUnique.mockResolvedValue(null);
 
-      await expect(cartService.addToCart('user-1', 'product-1', 1)).rejects.toThrow('Produto não encontrado');
+      await expect(
+        cartService.addToCart('user-1', 'product-1', 1),
+      ).rejects.toThrow('Produto não encontrado');
     });
 
     it('should throw error when product is not active', async () => {
       const inactiveProduct = { ...mockProduct, isActive: false };
       prisma.product.findUnique.mockResolvedValue(inactiveProduct);
 
-      await expect(cartService.addToCart('user-1', 'product-1', 1)).rejects.toThrow('Produto não está disponível');
+      await expect(
+        cartService.addToCart('user-1', 'product-1', 1),
+      ).rejects.toThrow('Produto não está disponível');
     });
 
     it('should throw error when quantity exceeds stock', async () => {
       prisma.product.findUnique.mockResolvedValue(mockProduct);
       prisma.cart.findUnique.mockResolvedValue(null);
 
-      await expect(cartService.addToCart('user-1', 'product-1', 100)).rejects.toThrow('Quantidade solicitada maior que o estoque disponível');
+      await expect(
+        cartService.addToCart('user-1', 'product-1', 100),
+      ).rejects.toThrow('Quantidade solicitada maior que o estoque disponível');
     });
   });
 
@@ -151,6 +157,7 @@ describe('CartService', () => {
       };
 
       prisma.cart.findUnique.mockResolvedValue(mockCart);
+      prisma.cartItem.findUnique.mockResolvedValue(mockCart.items[0]);
       prisma.cartItem.upsert.mockResolvedValue(updatedItem);
 
       const result = await cartService.updateCartItem('user-1', 'product-1', 3);
@@ -181,7 +188,7 @@ describe('CartService', () => {
       prisma.cart.findUnique.mockResolvedValue(mockCart);
       prisma.cartItem.delete.mockResolvedValue({} as any);
 
-      const result = await cartService.removeFromCart('user-1', 'product-1');
+      await cartService.removeFromCart('user-1', 'product-1');
 
       expect(prisma.cartItem.delete).toHaveBeenCalledWith({
         where: {

@@ -38,6 +38,8 @@ interface MarketConfig extends MarketData {
   whatsapp?: string;
   address?: string;
   pickupInstructions?: string;
+  deliveryFee?: number;
+  minOrderValue?: number;
 }
 
 export default function Checkout() {
@@ -235,15 +237,7 @@ export default function Checkout() {
     setError('');
 
     try {
-      const items = (cart.items ?? []).map(item => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        price: item.product.price,
-      }));
-
       const orderData: any = {
-        userId: JSON.parse(localStorage.getItem('user') || '{}').id,
-        items,
         customerName,
         customerPhone: '',
         zipCode,
@@ -341,7 +335,8 @@ export default function Checkout() {
   const items = cart.items ?? [];
   console.log('[Checkout] Render state:', { loading, submitting, success, error, cartItemsCount: items.length, cart });
   const subtotal = items.reduce((sum, item) => sum + (item.product?.price ?? 0) * (item.quantity ?? 0), 0);
-  const total = subtotal; // taxaEntrega = 0 inicialmente
+  const deliveryFee = fulfillmentType === 'DELIVERY' ? (marketConfig?.deliveryFee ?? 0) : 0;
+  const total = subtotal + deliveryFee;
 
   return (
     <div>
@@ -625,7 +620,7 @@ export default function Checkout() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Taxa de entrega</span>
-                <span>Grátis</span>
+                <span>{deliveryFee === 0 ? 'Grátis' : `R$ ${deliveryFee.toFixed(2)}`}</span>
               </div>
               <div className="border-t pt-2 flex justify-between font-bold text-lg">
                 <span>Total</span>
@@ -635,7 +630,7 @@ export default function Checkout() {
           </div>
           <button
             type="submit"
-            disabled={submitting}
+            disabled={isSubmitDisabled}
             className="w-full mt-6 bg-emerald-600 text-white py-3 rounded-lg font-medium hover:bg-emerald-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {submitting ? (

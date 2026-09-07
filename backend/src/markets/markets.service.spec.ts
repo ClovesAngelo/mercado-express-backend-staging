@@ -2,7 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 import { MarketsService } from './markets.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { createMockPrismaService } from '../../test/helpers/prisma-mock';
+import {
+  createMockPrismaService,
+  MockedPrismaService,
+} from '../../test/helpers/prisma-mock';
 
 jest.mock('bcrypt', () => ({
   hash: jest.fn(),
@@ -10,16 +13,13 @@ jest.mock('bcrypt', () => ({
 
 describe('MarketsService', () => {
   let marketsService: MarketsService;
-  let prisma: jest.Mocked<PrismaService>;
+  let prisma: MockedPrismaService;
 
   beforeEach(async () => {
     prisma = createMockPrismaService();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        MarketsService,
-        { provide: PrismaService, useValue: prisma },
-      ],
+      providers: [MarketsService, { provide: PrismaService, useValue: prisma }],
     }).compile();
 
     marketsService = module.get<MarketsService>(MarketsService);
@@ -101,21 +101,29 @@ describe('MarketsService', () => {
       (bcrypt.hash as jest.Mock).mockResolvedValue('$2b$10$hashed');
 
       // Mock $transaction to execute the callback with tx proxy
-      prisma.$transaction.mockImplementation(async (fn: any) => {
-        // Create a mock tx that mirrors prisma methods
-        const tx = {
-          market: {
-            create: jest.fn().mockResolvedValue(createdMarket),
-            update: jest.fn().mockResolvedValue({ ...createdMarket, managerId: 'new-manager-id' }),
-          },
-          user: {
-            create: jest.fn().mockResolvedValue(createdManager),
-          },
-        };
-        return fn(tx);
-      });
+      prisma.$transaction.mockImplementation(
+        async (fn: (tx: unknown) => Promise<unknown>) => {
+          // Create a mock tx that mirrors prisma methods
+          const tx = {
+            market: {
+              create: jest.fn().mockResolvedValue(createdMarket),
+              update: jest.fn().mockResolvedValue({
+                ...createdMarket,
+                managerId: 'new-manager-id',
+              }),
+            },
+            user: {
+              create: jest.fn().mockResolvedValue(createdManager),
+            },
+          };
+          return await fn(tx);
+        },
+      );
 
-      const result = await marketsService.createWithManager(marketData, managerData);
+      const result = await marketsService.createWithManager(
+        marketData,
+        managerData,
+      );
 
       expect(bcrypt.hash).toHaveBeenCalledWith('plain-password', 10);
       expect(result).toBeDefined();
@@ -266,7 +274,11 @@ describe('MarketsService', () => {
       prisma.market.update.mockResolvedValue(updatedMarket);
 
       const adminUser = { id: 'admin-1', role: 'ADMIN_GERAL' };
-      const result = await marketsService.update('market-1', updateData, adminUser);
+      const result = await marketsService.update(
+        'market-1',
+        updateData,
+        adminUser,
+      );
 
       expect(result.name).toBe('Updated Market');
       expect(prisma.market.update).toHaveBeenCalledWith({
@@ -281,22 +293,53 @@ describe('MarketsService', () => {
         description: 'Updated desc',
         isActive: false, // NOT in allowed fields
       };
-      const updatedMarket = { ...mockMarket, name: 'Updated Name', description: 'Updated desc' };
+      const updatedMarket = {
+        ...mockMarket,
+        name: 'Updated Name',
+        description: 'Updated desc',
+      };
       prisma.market.update.mockResolvedValue(updatedMarket);
 
-      const gestorUser = { id: 'gestor-1', role: 'GESTOR_MERCADO' };
-      const result = await marketsService.update('market-1', updateData, gestorUser);
+      const gestorUser = {
+        id: 'gestor-1',
+        role: 'GESTOR_MERCADO',
+        marketId: 'market-1',
+      };
+      const result = await marketsService.update(
+        'market-1',
+        updateData,
+        gestorUser,
+      );
 
       expect(result.name).toBe('Updated Name');
       // isActive should NOT have been passed since it's not in allowed fields
-      const updateCall = (prisma.market.update as jest.Mock).mock.calls[0][0];
+      const updateCall = (
+        prisma.market.update.mock.calls as unknown[][]
+      )[0][0] as {
+        data?: Record<string, unknown>;
+      };
       expect(updateCall.data).not.toHaveProperty('isActive');
+    });
+
+    it('should reject a gestor updating a different market', async () => {
+      await expect(
+        marketsService.update(
+          'other-market',
+          { name: 'Tentativa indevida' },
+          { id: 'gestor-1', role: 'GESTOR_MERCADO', marketId: 'market-1' },
+        ),
+      ).rejects.toThrow(
+        'Você só pode atualizar o mercado ao qual está vinculado',
+      );
     });
   });
 
   describe('setActive', () => {
     it('should set market active status', async () => {
-      prisma.market.update.mockResolvedValue({ ...mockMarket, isActive: false });
+      prisma.market.update.mockResolvedValue({
+        ...mockMarket,
+        isActive: false,
+      });
 
       const result = await marketsService.setActive('market-1', false);
 

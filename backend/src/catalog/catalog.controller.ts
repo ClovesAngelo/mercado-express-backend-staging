@@ -1,9 +1,28 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete, UseGuards, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Patch,
+  Delete,
+  UseGuards,
+  HttpException,
+  HttpStatus,
+  Logger,
+  Req,
+} from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '@prisma/client';
+import type { Request } from 'express';
+import {
+  CreateProductDto,
+  UpdateProductDto,
+  UpdateStockDto,
+} from './dto/product.dto';
 
 @Controller('catalog')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -17,24 +36,30 @@ export class CatalogController {
     try {
       return await this.catalogService.findAllCategories();
     } catch (error) {
-      this.logger.error(`ERROR fetching categories: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `ERROR fetching categories: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw new HttpException(
         (error as Error)?.message || 'Erro ao buscar categorias',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
   @Post('categories')
-  @Roles(UserRole.ADMIN_GERAL, UserRole.GESTOR_MERCADO)
-  async createCategory(@Body() createCategoryDto: any) {
+  @Roles(UserRole.ADMIN_GERAL)
+  async createCategory(@Body() createCategoryDto: { name: string }) {
     try {
       return await this.catalogService.createCategory(createCategoryDto);
     } catch (error) {
-      this.logger.error(`ERROR creating category: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `ERROR creating category: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw new HttpException(
         (error as Error)?.message || 'Erro ao criar categoria',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -45,10 +70,13 @@ export class CatalogController {
     try {
       return await this.catalogService.findAllProducts();
     } catch (error) {
-      this.logger.error(`ERROR fetching all products: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `ERROR fetching all products: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw new HttpException(
         (error as Error)?.message || 'Erro ao buscar produtos',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -59,66 +87,99 @@ export class CatalogController {
     try {
       return await this.catalogService.findByMarket(marketId);
     } catch (error) {
-      this.logger.error(`ERROR fetching products by market: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `ERROR fetching products by market: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw new HttpException(
         (error as Error)?.message || 'Erro ao buscar produtos',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
   @Post('products')
   @Roles(UserRole.ADMIN_GERAL, UserRole.GESTOR_MERCADO)
-  async createProduct(@Body() createProductDto: any) {
+  async createProduct(
+    @Body() createProductDto: CreateProductDto,
+    @Req() req: Request,
+  ) {
     try {
-      return await this.catalogService.createProduct(createProductDto);
+      return await this.catalogService.createProduct(
+        createProductDto,
+        req.user!,
+      );
     } catch (error) {
-      this.logger.error(`ERROR creating product: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `ERROR creating product: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw new HttpException(
         (error as Error)?.message || 'Erro ao criar produto',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
   @Patch('products/:id')
   @Roles(UserRole.ADMIN_GERAL, UserRole.GESTOR_MERCADO)
-  async updateProduct(@Param('id') id: string, @Body() updateProductDto: any) {
+  async updateProduct(
+    @Param('id') id: string,
+    @Body() updateProductDto: UpdateProductDto,
+    @Req() req: Request,
+  ) {
     try {
-      return await this.catalogService.updateProduct(id, updateProductDto);
+      return await this.catalogService.updateProduct(
+        id,
+        updateProductDto,
+        req.user!,
+      );
     } catch (error) {
-      this.logger.error(`ERROR updating product: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `ERROR updating product: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw new HttpException(
         (error as Error)?.message || 'Erro ao atualizar produto',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
   @Patch('products/:id/stock')
   @Roles(UserRole.ADMIN_GERAL, UserRole.GESTOR_MERCADO)
-  async updateStock(@Param('id') id: string, @Body() stockData: { stock: number; minStock: number }) {
+  async updateStock(
+    @Param('id') id: string,
+    @Body() stockData: UpdateStockDto,
+    @Req() req: Request,
+  ) {
     try {
-      return await this.catalogService.updateStock(id, stockData);
+      return await this.catalogService.updateStock(id, stockData, req.user!);
     } catch (error) {
-      this.logger.error(`ERROR updating stock: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `ERROR updating stock: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw new HttpException(
         (error as Error)?.message || 'Erro ao atualizar estoque',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
   @Delete('products/:id')
   @Roles(UserRole.ADMIN_GERAL, UserRole.GESTOR_MERCADO)
-  async deleteProduct(@Param('id') id: string) {
+  async deleteProduct(@Param('id') id: string, @Req() req: Request) {
     try {
-      return await this.catalogService.deleteProduct(id);
+      return await this.catalogService.deleteProduct(id, req.user!);
     } catch (error) {
-      this.logger.error(`ERROR deleting product: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `ERROR deleting product: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw new HttpException(
         (error as Error)?.message || 'Erro ao excluir produto',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -129,10 +190,13 @@ export class CatalogController {
     try {
       return await this.catalogService.getProductImagesLibrary();
     } catch (error) {
-      this.logger.error(`ERROR fetching product images library: ${(error as Error).message}`, (error as Error).stack);
+      this.logger.error(
+        `ERROR fetching product images library: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw new HttpException(
         (error as Error)?.message || 'Erro ao buscar biblioteca de imagens',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }

@@ -1,31 +1,52 @@
-import { Injectable, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { FulfillmentType, PaymentMethod } from '@prisma/client';
+import { FulfillmentType, PaymentMethod, Prisma } from '@prisma/client';
+import { OrderStatus } from './dto/update-order-status.dto';
+import {
+  assertOrderStatusTransition,
+  isWithinDeliveryTime,
+} from './order-policy';
+export interface AuthenticatedUser {
+  id: string;
+  email: string;
+  name?: string | null;
+  role: string;
+  marketId?: string | null;
+}
+const orderItemInclude: Prisma.OrderItemInclude = {
+  product: {
+    include: {
+      market: true,
+    },
+  },
+};
 
 @Injectable()
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
-
   constructor(private prisma: PrismaService) {}
 
-  private isWithinDeliveryTime(market: any): boolean {
-    if (!market.deliveryStartTime || !market.deliveryEndTime) {
-      return true;
-    }
-    const now = new Date();
-    const currentTime = now.getHours() * 60 + now.getMinutes();
-    const [startH, startM] = market.deliveryStartTime.split(':').map(Number);
-    const [endH, endM] = market.deliveryEndTime.split(':').map(Number);
-    const startMinutes = startH * 60 + startM;
-    const endMinutes = endH * 60 + endM;
-    return currentTime >= startMinutes && currentTime <= endMinutes;
-  }
-
-  async create(userId: string, items: Array<{ productId: string; quantity: number; price: number }>, checkoutData?: CreateOrderDto) {
-    this.logger.log(`Creating order for user ${userId} with ${items.length} items`);
-    const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    this.logger.log(`Total calculated: ${total}`);
+  async create(
+    userId: string,
+    items: Array<{
+      productId: string;
+      quantity: number;
+      price: number;
+      productName?: string;
+    }>,
+    checkoutData?: CreateOrderDto,
+  ) {
+    this.logger.log(
+      `Creating order for user ${userId} with ${items.length} items`,
+    );
+    if (!items.length)
+      throw new BadRequestException('O pedido deve conter itens.');
 
     const firstProduct = await this.prisma.product.findUnique({
       where: { id: items[0].productId },
@@ -37,52 +58,109 @@ export class OrdersService {
     }
 
     const market = firstProduct.market;
-    const fulfillmentType = checkoutData?.fulfillmentType || FulfillmentType.DELIVERY;
-    const paymentMethod = checkoutData?.paymentMethod || PaymentMethod.DINHEIRO_NA_ENTREGA;
-
-    if (fulfillmentType === FulfillmentType.DELIVERY && !market.acceptsDelivery) {
-      throw new BadRequestException('Este mercado não aceita entrega. Escolha retirada no mercado.');
+    if (market.isActive === false || market.deletedAt) {
+      throw new BadRequestException(
+        'Este mercado não está disponível para pedidos.',
+      );
     }
+    const fulfillmentType =
+      checkoutData?.fulfillmentType || FulfillmentType.DELIVERY;
+    const paymentMethod =
+      checkoutData?.paymentMethod || PaymentMethod.DINHEIRO_NA_ENTREGA;
 
+    if (
+      fulfillmentType === FulfillmentType.DELIVERY &&
+      !market.acceptsDelivery
+    ) {
+      throw new BadRequestException(
+        'Este mercado não aceita entrega. Escolha retirada no mercado.',
+      );
+    }
     if (fulfillmentType === FulfillmentType.PICKUP && !market.acceptsPickup) {
-      throw new BadRequestException('Este mercado não aceita retirada. Escolha entrega.');
+      throw new BadRequestException(
+        'Este mercado não aceita retirada. Escolha entrega.',
+      );
     }
-
-    if (fulfillmentType === FulfillmentType.DELIVERY && !this.isWithinDeliveryTime(market)) {
-      throw new BadRequestException('Entrega indisponível neste horário. Retirada ainda disponível.');
+    if (
+      fulfillmentType === FulfillmentType.DELIVERY &&
+      !isWithinDeliveryTime(market)
+    ) {
+      throw new BadRequestException(
+        'Entrega indisponível neste horário. Retirada ainda disponível.',
+      );
     }
-
     if (paymentMethod === PaymentMethod.PIX && !market.pixEnabled) {
-      throw new BadRequestException('Este mercado não aceita pagamento via PIX no momento.');
+      throw new BadRequestException(
+        'Este mercado não aceita pagamento via PIX no momento.',
+      );
+    }
+    if (
+      paymentMethod === PaymentMethod.PIX &&
+      (!market.pixKey || !market.pixRecipientName)
+    ) {
+      throw new BadRequestException(
+        'Mercado não possui dados Pix configurados. Escolha outra forma de pagamento.',
+      );
     }
 
-    if (paymentMethod === PaymentMethod.PIX && (!market.pixKey || !market.pixRecipientName)) {
-      throw new BadRequestException('Mercado não possui dados Pix configurados. Escolha outra forma de pagamento.');
-    }
-
-    // Validar estoque de todos os produtos antes de criar o pedido
+    let subtotal = 0;
     for (const item of items) {
       const product = await this.prisma.product.findUnique({
         where: { id: item.productId },
       });
 
       if (!product) {
-        throw new BadRequestException(`O produto ${item.productId || 'desconhecido'} não foi encontrado.`);
+        throw new BadRequestException(
+          `O produto ${item.productId || 'desconhecido'} não foi encontrado.`,
+        );
       }
-
+      if (product.marketId !== market.id) {
+        throw new BadRequestException(
+          'Todos os itens do pedido devem pertencer ao mesmo mercado.',
+        );
+      }
+      if (!product.isActive || product.deletedAt) {
+        throw new BadRequestException(
+          `O produto ${product.name} não está disponível.`,
+        );
+      }
       if (product.stock < item.quantity) {
         throw new BadRequestException(
           `O produto ${product.name} não possui estoque suficiente. ` +
-          `Solicitado: ${item.quantity}, Disponível: ${product.stock}`
+            `Solicitado: ${item.quantity}, Disponível: ${product.stock}`,
         );
       }
+      item.price = product.price;
+      item.productName = product.name;
+      subtotal += product.price * item.quantity;
     }
+    const minOrderValue = market.minOrderValue ?? 0;
+    if (subtotal < minOrderValue) {
+      throw new BadRequestException(
+        `O pedido mínimo deste mercado é R$ ${minOrderValue.toFixed(2)}.`,
+      );
+    }
+    const deliveryFee =
+      fulfillmentType === FulfillmentType.DELIVERY
+        ? (market.deliveryFee ?? 0)
+        : 0;
+    const total = subtotal + deliveryFee;
+    if (
+      checkoutData?.needsChange &&
+      (!checkoutData.changeFor || checkoutData.changeFor < total)
+    ) {
+      throw new BadRequestException(
+        'O valor para troco deve ser maior ou igual ao total do pedido.',
+      );
+    }
+    this.logger.log(`Total calculated: ${total}`);
 
     const order = await this.prisma.order.create({
       data: {
         userId,
         marketId: market.id,
         total,
+        deliveryFee,
         customerName: checkoutData?.customerName,
         customerPhone: checkoutData?.customerPhone,
         zipCode: checkoutData?.zipCode,
@@ -95,49 +173,36 @@ export class OrdersService {
         reference: checkoutData?.reference,
         fulfillmentType,
         paymentMethod,
-        paymentStatus: paymentMethod === PaymentMethod.PIX ? 'PENDING' : 'CONFIRMED',
+        paymentStatus:
+          paymentMethod === PaymentMethod.PIX ? 'PENDING' : 'CONFIRMED',
         needsChange: checkoutData?.needsChange,
         changeFor: checkoutData?.changeFor,
         items: {
-          create: items.map(item => ({
+          create: items.map((item) => ({
             productId: item.productId,
-            productName: (item as any).productName || 'Produto',
+            productName: item.productName ?? 'Produto',
             productPrice: item.price,
             quantity: item.quantity,
             subtotal: item.price * item.quantity,
-          })) as any,
+          })),
         },
       },
       include: {
         items: {
-          include: {
-            product: {
-              include: {
-                market: true,
-              },
-            },
-          },
+          include: orderItemInclude,
         },
         market: true,
       },
     });
-
     this.logger.log(`Order created: ${order.id}`);
     return order;
   }
-
   async findByUser(userId: string) {
     return this.prisma.order.findMany({
       where: { userId },
       include: {
         items: {
-          include: {
-            product: {
-              include: {
-                market: true,
-              },
-            },
-          },
+          include: orderItemInclude,
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -149,13 +214,7 @@ export class OrdersService {
       where: { marketId },
       include: {
         items: {
-          include: {
-            product: {
-              include: {
-                market: true,
-              },
-            },
-          },
+          include: orderItemInclude,
         },
         user: true,
       },
@@ -167,13 +226,7 @@ export class OrdersService {
     return this.prisma.order.findMany({
       include: {
         items: {
-          include: {
-            product: {
-              include: {
-                market: true,
-              },
-            },
-          },
+          include: orderItemInclude,
         },
         user: true,
       },
@@ -186,20 +239,14 @@ export class OrdersService {
       where: { id },
       include: {
         items: {
-          include: {
-            product: {
-              include: {
-                market: true,
-              },
-            },
-          },
+          include: orderItemInclude,
         },
         user: true,
       },
     });
   }
 
-  async updateStatus(id: string, status: string, user: any) {
+  async updateStatus(id: string, status: OrderStatus, user: AuthenticatedUser) {
     const order = await this.prisma.order.findUnique({
       where: { id },
       include: {
@@ -217,14 +264,15 @@ export class OrdersService {
     }
 
     if (user.role === 'GESTOR_MERCADO' && order.marketId !== user.marketId) {
-      throw new ForbiddenException('Acesso negado: você só pode atualizar pedidos do seu mercado');
+      throw new ForbiddenException(
+        'Acesso negado: você só pode atualizar pedidos do seu mercado',
+      );
     }
 
-    // Se o status for DELIVERED e ainda não foi descontado o estoque
+    assertOrderStatusTransition(order.status, status);
+
     if (status === 'DELIVERED' && !order.stockDeductedAt) {
-      // Usar transação para garantir consistência
       const updatedOrder = await this.prisma.$transaction(async (tx) => {
-        // Verificar estoque novamente dentro da transação
         for (const item of order.items) {
           const product = await tx.product.findUnique({
             where: { id: item.productId },
@@ -232,20 +280,19 @@ export class OrdersService {
 
           if (!product) {
             throw new ForbiddenException(
-              `Produto ${item.productName} não encontrado no sistema`
+              `Produto ${item.productName} não encontrado no sistema`,
             );
           }
 
           if (product.stock < item.quantity) {
             throw new BadRequestException(
               `Não há estoque suficiente para marcar este pedido como entregue. ` +
-              `Produto: ${product.name}. ` +
-              `Solicitado: ${item.quantity}, Disponível: ${product.stock}`
+                `Produto: ${product.name}. ` +
+                `Solicitado: ${item.quantity}, Disponível: ${product.stock}`,
             );
           }
         }
 
-        // Descontar estoque de todos os produtos
         for (const item of order.items) {
           await tx.product.update({
             where: { id: item.productId },
@@ -257,7 +304,6 @@ export class OrdersService {
           });
         }
 
-        // Atualizar pedido com status e marcação de estoque descontado
         return tx.order.update({
           where: { id },
           data: {
@@ -283,7 +329,6 @@ export class OrdersService {
       return updatedOrder;
     }
 
-    // Se já foi descontado ou não é DELIVERED, apenas atualiza o status
     return this.prisma.order.update({
       where: { id },
       data: { status },

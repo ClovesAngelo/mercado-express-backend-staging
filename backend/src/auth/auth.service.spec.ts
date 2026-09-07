@@ -3,24 +3,29 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { createMockPrismaService } from '../../test/helpers/prisma-mock';
-import { makeUser, makeLoginDto, makeRegisterDto } from '../../test/helpers/auth-test-data';
+import {
+  createMockPrismaService,
+  MockedPrismaService,
+} from '../../test/helpers/prisma-mock';
+import { makeUser, makeRegisterDto } from '../../test/helpers/auth-test-data';
 
 jest.mock('bcrypt', () => ({
   compare: jest.fn(),
   hash: jest.fn(),
 }));
 
+const mockedBcrypt = jest.mocked(bcrypt);
+
 describe('AuthService', () => {
   let authService: AuthService;
-  let prisma: jest.Mocked<PrismaService>;
+  let prisma: MockedPrismaService;
   let jwtService: jest.Mocked<JwtService>;
 
   beforeEach(async () => {
     prisma = createMockPrismaService();
     jwtService = {
       sign: jest.fn(),
-    } as any;
+    } as jest.Mocked<JwtService>;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -41,9 +46,12 @@ describe('AuthService', () => {
     it('should return user data without password when credentials are valid', async () => {
       const user = makeUser();
       prisma.user.findUnique.mockResolvedValue(user);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      (mockedBcrypt.compare as jest.Mock).mockResolvedValue(true);
 
-      const result = await authService.validateUser('test@example.com', 'correct-password');
+      const result = await authService.validateUser(
+        'test@example.com',
+        'correct-password',
+      );
 
       expect(result).toBeDefined();
       expect(result).not.toHaveProperty('password');
@@ -51,13 +59,19 @@ describe('AuthService', () => {
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { email: 'test@example.com' },
       });
-      expect(bcrypt.compare).toHaveBeenCalledWith('correct-password', user.password);
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        'correct-password',
+        user.password,
+      );
     });
 
     it('should return null when email does not exist', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
-      const result = await authService.validateUser('nonexistent@example.com', 'any-password');
+      const result = await authService.validateUser(
+        'nonexistent@example.com',
+        'any-password',
+      );
 
       expect(result).toBeNull();
     });
@@ -65,12 +79,18 @@ describe('AuthService', () => {
     it('should return null when password is invalid', async () => {
       const user = makeUser();
       prisma.user.findUnique.mockResolvedValue(user);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+      (mockedBcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      const result = await authService.validateUser('test@example.com', 'wrong-password');
+      const result = await authService.validateUser(
+        'test@example.com',
+        'wrong-password',
+      );
 
       expect(result).toBeNull();
-      expect(bcrypt.compare).toHaveBeenCalledWith('wrong-password', user.password);
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        'wrong-password',
+        user.password,
+      );
     });
 
     it('should rethrow error when prisma fails', async () => {
@@ -86,7 +106,8 @@ describe('AuthService', () => {
     it('should generate JWT token and return user data without password', async () => {
       const user = makeUser({ role: 'CLIENTE' });
       const token = 'generated-jwt-token';
-      jwtService.sign.mockReturnValue(token);
+      const signMock = jest.spyOn(jwtService, 'sign');
+      signMock.mockReturnValue(token);
 
       const result = await authService.login(user);
 
@@ -99,7 +120,7 @@ describe('AuthService', () => {
         marketId: user.marketId,
       });
       expect(result.user).not.toHaveProperty('password');
-      expect(jwtService.sign).toHaveBeenCalledWith({
+      expect(signMock).toHaveBeenCalledWith({
         email: user.email,
         sub: user.id,
         role: user.role,
@@ -109,7 +130,7 @@ describe('AuthService', () => {
 
     it('should throw UnauthorizedException when JWT sign fails', async () => {
       const user = makeUser();
-      jwtService.sign.mockImplementation(() => {
+      (jwtService.sign as jest.Mock).mockImplementation(() => {
         throw new Error('JWT error');
       });
 
@@ -125,13 +146,13 @@ describe('AuthService', () => {
         email: dto.email,
         name: dto.name,
         password: hashedPassword,
-        role: dto.role,
+        role: 'CLIENTE',
       });
       const token = 'generated-jwt-token';
 
-      (bcrypt.hash as jest.Mock).mockResolvedValue(hashedPassword);
+      (mockedBcrypt.hash as jest.Mock).mockResolvedValue(hashedPassword);
       prisma.user.create.mockResolvedValue(createdUser);
-      jwtService.sign.mockReturnValue(token);
+      (jwtService.sign as jest.Mock).mockReturnValue(token);
 
       const result = await authService.register(dto);
 
@@ -141,7 +162,7 @@ describe('AuthService', () => {
           email: dto.email,
           name: dto.name,
           password: hashedPassword,
-          role: dto.role,
+          role: 'CLIENTE',
         },
       });
       expect(result.access_token).toBe(token);
@@ -150,18 +171,22 @@ describe('AuthService', () => {
 
     it('should throw "Email já cadastrado" when email already exists', async () => {
       const dto = makeRegisterDto();
-      (bcrypt.hash as jest.Mock).mockResolvedValue('$2b$10$hash');
+      (mockedBcrypt.hash as jest.Mock).mockResolvedValue('$2b$10$hash');
       prisma.user.create.mockRejectedValue({ code: 'P2002' });
 
-      await expect(authService.register(dto)).rejects.toThrow('Email já cadastrado');
+      await expect(authService.register(dto)).rejects.toThrow(
+        'Email já cadastrado',
+      );
     });
 
     it('should throw generic error on other prisma failures', async () => {
       const dto = makeRegisterDto();
-      (bcrypt.hash as jest.Mock).mockResolvedValue('$2b$10$hash');
+      (mockedBcrypt.hash as jest.Mock).mockResolvedValue('$2b$10$hash');
       prisma.user.create.mockRejectedValue(new Error('Some other error'));
 
-      await expect(authService.register(dto)).rejects.toThrow('Erro ao criar conta');
+      await expect(authService.register(dto)).rejects.toThrow(
+        'Erro ao criar conta',
+      );
     });
   });
 });

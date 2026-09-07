@@ -1,20 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CatalogService } from './catalog.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { createMockPrismaService } from '../../test/helpers/prisma-mock';
+import {
+  createMockPrismaService,
+  MockedPrismaService,
+} from '../../test/helpers/prisma-mock';
 
 describe('CatalogService', () => {
   let catalogService: CatalogService;
-  let prisma: jest.Mocked<PrismaService>;
+  let prisma: MockedPrismaService;
 
   beforeEach(async () => {
     prisma = createMockPrismaService();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        CatalogService,
-        { provide: PrismaService, useValue: prisma },
-      ],
+      providers: [CatalogService, { provide: PrismaService, useValue: prisma }],
     }).compile();
 
     catalogService = module.get<CatalogService>(CatalogService);
@@ -37,7 +37,7 @@ describe('CatalogService', () => {
     id: 'prod-1',
     name: 'Test Product',
     description: 'A test product',
-    price: 25.00,
+    price: 25.0,
     imageUrl: null,
     stock: 100,
     minStock: 5,
@@ -100,14 +100,18 @@ describe('CatalogService', () => {
     it('should create a product', async () => {
       const createDto = {
         name: 'New Product',
-        price: 30.00,
+        price: 30.0,
         marketId: 'market-1',
         categoryId: 'cat-1',
       };
 
       prisma.product.create.mockResolvedValue(mockProduct);
 
-      const result = await catalogService.createProduct(createDto);
+      const result = await catalogService.createProduct(createDto, {
+        id: 'admin-1',
+        role: 'ADMIN_GERAL',
+        email: 'admin@example.com',
+      });
 
       expect(prisma.product.create).toHaveBeenCalledWith({
         data: createDto,
@@ -119,11 +123,20 @@ describe('CatalogService', () => {
 
   describe('updateProduct', () => {
     it('should update a product', async () => {
-      const updateDto = { name: 'Updated Product', price: 35.00 };
-      const updatedProduct = { ...mockProduct, name: 'Updated Product', price: 35.00 };
+      const updateDto = { name: 'Updated Product', price: 35.0 };
+      const updatedProduct = {
+        ...mockProduct,
+        name: 'Updated Product',
+        price: 35.0,
+      };
       prisma.product.update.mockResolvedValue(updatedProduct);
 
-      const result = await catalogService.updateProduct('prod-1', updateDto);
+      prisma.product.findUnique.mockResolvedValue(mockProduct);
+      const result = await catalogService.updateProduct('prod-1', updateDto, {
+        id: 'admin-1',
+        role: 'ADMIN_GERAL',
+        email: 'admin@example.com',
+      });
 
       expect(result.name).toBe('Updated Product');
       expect(prisma.product.update).toHaveBeenCalledWith({
@@ -138,11 +151,16 @@ describe('CatalogService', () => {
     it('should soft delete a product', async () => {
       prisma.product.update.mockResolvedValue(mockProduct);
 
-      const result = await catalogService.deleteProduct('prod-1');
+      prisma.product.findUnique.mockResolvedValue(mockProduct);
+      await catalogService.deleteProduct('prod-1', {
+        id: 'admin-1',
+        role: 'ADMIN_GERAL',
+        email: 'admin@example.com',
+      });
 
       expect(prisma.product.update).toHaveBeenCalledWith({
         where: { id: 'prod-1' },
-        data: { deletedAt: expect.any(Date) },
+        data: { deletedAt: expect.any(Date) as never },
       });
     });
   });
@@ -153,7 +171,12 @@ describe('CatalogService', () => {
       const updatedProduct = { ...mockProduct, stock: 80, minStock: 10 };
       prisma.product.update.mockResolvedValue(updatedProduct);
 
-      const result = await catalogService.updateStock('prod-1', stockData);
+      prisma.product.findUnique.mockResolvedValue(mockProduct);
+      const result = await catalogService.updateStock('prod-1', stockData, {
+        id: 'admin-1',
+        role: 'ADMIN_GERAL',
+        email: 'admin@example.com',
+      });
 
       expect(result.stock).toBe(80);
       expect(result.minStock).toBe(10);
@@ -168,7 +191,10 @@ describe('CatalogService', () => {
   describe('createCategory', () => {
     it('should create a category', async () => {
       const createDto = { name: 'New Category' };
-      prisma.category.create.mockResolvedValue({ ...mockCategory, name: 'New Category' });
+      prisma.category.create.mockResolvedValue({
+        ...mockCategory,
+        name: 'New Category',
+      });
 
       const result = await catalogService.createCategory(createDto);
 

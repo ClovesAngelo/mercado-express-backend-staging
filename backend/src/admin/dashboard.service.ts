@@ -1,8 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+export interface GeneralStats {
+  markets: { total: number; active: number; inactive: number };
+  users: { clients: number; managers: number };
+  orders: { pending: number; delivered: number; cancelled: number };
+  revenue: { total: number };
+}
+
+export interface MarketStats {
+  products: { total: number; active: number };
+  orders: { total: number; pending: number; delivered: number };
+  revenue: { total: number };
+}
+
 interface CacheEntry {
-  data: any;
+  data: GeneralStats;
   timestamp: number;
 }
 
@@ -28,7 +41,7 @@ export class DashboardService {
     }
   }
 
-  async getGeneralStats() {
+  async getGeneralStats(): Promise<GeneralStats> {
     if (this.isCacheValid()) {
       this.logger.log('Dashboard: retornando cache');
       return this.cache!.data;
@@ -39,42 +52,50 @@ export class DashboardService {
 
     const totalMarkets = await this.safeQuery(
       this.prisma.market.count({ where: { deletedAt: null } }),
-      0
+      0,
     );
     const activeMarkets = await this.safeQuery(
       this.prisma.market.count({ where: { isActive: true, deletedAt: null } }),
-      0
+      0,
     );
     const inactiveMarkets = await this.safeQuery(
       this.prisma.market.count({ where: { isActive: false, deletedAt: null } }),
-      0
+      0,
     );
     const totalClients = await this.safeQuery(
       this.prisma.user.count({ where: { role: 'CLIENTE', deletedAt: null } }),
-      0
+      0,
     );
     const totalManagers = await this.safeQuery(
-      this.prisma.user.count({ where: { role: 'GESTOR_MERCADO', deletedAt: null } }),
-      0
+      this.prisma.user.count({
+        where: { role: 'GESTOR_MERCADO', deletedAt: null },
+      }),
+      0,
     );
     const pendingOrders = await this.safeQuery(
-      this.prisma.order.count({ where: { status: 'PENDING', deletedAt: null } }),
-      0
+      this.prisma.order.count({
+        where: { status: 'PENDING', deletedAt: null },
+      }),
+      0,
     );
     const deliveredOrders = await this.safeQuery(
-      this.prisma.order.count({ where: { status: 'DELIVERED', deletedAt: null } }),
-      0
+      this.prisma.order.count({
+        where: { status: 'DELIVERED', deletedAt: null },
+      }),
+      0,
     );
     const cancelledOrders = await this.safeQuery(
-      this.prisma.order.count({ where: { status: 'CANCELLED', deletedAt: null } }),
-      0
+      this.prisma.order.count({
+        where: { status: 'CANCELLED', deletedAt: null },
+      }),
+      0,
     );
     const totalRevenue = await this.safeQuery(
       this.prisma.order.aggregate({
         where: { status: 'DELIVERED', deletedAt: null },
         _sum: { total: true },
       }),
-      { _sum: { total: null } }
+      { _sum: { total: null } },
     );
 
     const result = {
@@ -93,7 +114,7 @@ export class DashboardService {
         cancelled: cancelledOrders,
       },
       revenue: {
-        total: (totalRevenue as any)?._sum?.total ?? 0,
+        total: totalRevenue._sum?.total ?? 0,
       },
     };
 
@@ -105,36 +126,42 @@ export class DashboardService {
     return result;
   }
 
-  async getMarketStats(marketId: string) {
+  async getMarketStats(marketId: string): Promise<MarketStats> {
     this.logger.log(`Dashboard: iniciando getMarketStats(${marketId})`);
     const startTime = Date.now();
 
     const totalProducts = await this.safeQuery(
       this.prisma.product.count({ where: { marketId, deletedAt: null } }),
-      0
+      0,
     );
     const activeProducts = await this.safeQuery(
-      this.prisma.product.count({ where: { marketId, isActive: true, deletedAt: null } }),
-      0
+      this.prisma.product.count({
+        where: { marketId, isActive: true, deletedAt: null },
+      }),
+      0,
     );
     const totalOrders = await this.safeQuery(
       this.prisma.order.count({ where: { marketId, deletedAt: null } }),
-      0
+      0,
     );
     const pendingOrders = await this.safeQuery(
-      this.prisma.order.count({ where: { marketId, status: 'PENDING', deletedAt: null } }),
-      0
+      this.prisma.order.count({
+        where: { marketId, status: 'PENDING', deletedAt: null },
+      }),
+      0,
     );
     const deliveredOrders = await this.safeQuery(
-      this.prisma.order.count({ where: { marketId, status: 'DELIVERED', deletedAt: null } }),
-      0
+      this.prisma.order.count({
+        where: { marketId, status: 'DELIVERED', deletedAt: null },
+      }),
+      0,
     );
     const revenue = await this.safeQuery(
       this.prisma.order.aggregate({
         where: { marketId, status: 'DELIVERED', deletedAt: null },
         _sum: { total: true },
       }),
-      { _sum: { total: null } }
+      { _sum: { total: null } },
     );
 
     const result = {
@@ -148,7 +175,7 @@ export class DashboardService {
         delivered: deliveredOrders,
       },
       revenue: {
-        total: (revenue as any)?._sum?.total ?? 0,
+        total: revenue._sum?.total ?? 0,
       },
     };
 

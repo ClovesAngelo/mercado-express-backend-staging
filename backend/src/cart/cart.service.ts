@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -42,7 +46,10 @@ export class CartService {
       return { items: [], total: 0 };
     }
 
-    const total = cart.items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+    const total = cart.items.reduce(
+      (sum, item) => sum + item.product.price * item.quantity,
+      0,
+    );
 
     return {
       id: cart.id,
@@ -57,7 +64,7 @@ export class CartService {
   async addToCart(userId: string, productId: string, quantity: number) {
     // Validar quantity
     if (!quantity || quantity < 1) {
-      throw new Error('Quantidade deve ser maior que zero');
+      throw new BadRequestException('Quantidade deve ser maior que zero');
     }
 
     const product = await this.prisma.product.findUnique({
@@ -65,29 +72,40 @@ export class CartService {
     });
 
     if (!product) {
-      throw new Error('Produto não encontrado');
+      throw new NotFoundException('Produto não encontrado');
     }
 
-    if (!product.isActive) {
-      throw new Error('Produto não está disponível');
+    if (!product.isActive || product.deletedAt) {
+      throw new BadRequestException('Produto não está disponível');
     }
 
     // Verificar estoque disponível
     const cart = await this.prisma.cart.findUnique({
       where: { userId },
       include: {
-        items: {
-          where: { productId },
-        },
+        items: { include: { product: { select: { marketId: true } } } },
       },
     });
 
-    const existingItem = cart?.items.find(item => item.productId === productId);
+    const otherMarketItem = cart?.items.find(
+      (item) => item.product.marketId !== product.marketId,
+    );
+    if (otherMarketItem) {
+      throw new BadRequestException(
+        'O carrinho aceita itens de apenas um mercado por vez. Finalize ou esvazie o carrinho antes de adicionar este produto.',
+      );
+    }
+
+    const existingItem = cart?.items.find(
+      (item) => item.productId === productId,
+    );
     const currentQuantityInCart = existingItem?.quantity || 0;
     const totalQuantityAfterAdd = currentQuantityInCart + quantity;
 
     if (product.stock < totalQuantityAfterAdd) {
-      throw new Error(`Quantidade solicitada maior que o estoque disponível. Estoque: ${product.stock}, No carrinho: ${currentQuantityInCart}`);
+      throw new BadRequestException(
+        `Quantidade solicitada maior que o estoque disponível. Estoque: ${product.stock}, No carrinho: ${currentQuantityInCart}`,
+      );
     }
 
     // Criar ou atualizar carrinho
@@ -121,6 +139,19 @@ export class CartService {
 
     if (quantity < 1) {
       return this.removeFromCart(userId, productId);
+    }
+
+    const item = await this.prisma.cartItem.findUnique({
+      where: { cartId_productId: { cartId: cart.id, productId } },
+      include: { product: true },
+    });
+    if (!item || !item.product.isActive || item.product.deletedAt) {
+      throw new NotFoundException('Produto não está mais disponível.');
+    }
+    if (quantity > item.product.stock) {
+      throw new BadRequestException(
+        `Quantidade solicitada maior que o estoque disponível. Estoque: ${item.product.stock}`,
+      );
     }
 
     return this.prisma.cartItem.upsert({
