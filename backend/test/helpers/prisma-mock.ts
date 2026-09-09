@@ -48,7 +48,7 @@ function createModelMock(): PrismaModelMock {
  */
 export function createMockPrismaService(): MockedPrismaService {
   const defaultMock: MockedPrismaService = {
-    $transaction: jestFn((fn: (tx: MockedPrismaService) => unknown) =>
+    $transaction: jest.fn((fn: (tx: MockedPrismaService) => unknown) =>
       fn(defaultMock),
     ),
     $connect: jestFn(),

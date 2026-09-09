@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   createMockPrismaService,
@@ -34,7 +35,7 @@ describe('UsersService', () => {
 
   describe('create', () => {
     it('should create a user', async () => {
-      const createDto = {
+      const createDto: Prisma.UserCreateInput = {
         email: 'new@example.com',
         name: 'New User',
         password: 'hashed-password',

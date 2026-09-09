@@ -19,13 +19,13 @@ const mockedBcrypt = jest.mocked(bcrypt);
 describe('AuthService', () => {
   let authService: AuthService;
   let prisma: MockedPrismaService;
-  let jwtService: jest.Mocked<JwtService>;
+  let jwtService: jest.Mocked<Pick<JwtService, 'sign'>>;
 
   beforeEach(async () => {
     prisma = createMockPrismaService();
     jwtService = {
       sign: jest.fn(),
-    } as jest.Mocked<JwtService>;
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -55,7 +55,7 @@ describe('AuthService', () => {
 
       expect(result).toBeDefined();
       expect(result).not.toHaveProperty('password');
-      expect(result.email).toBe('test@example.com');
+      expect(result?.email).toBe('test@example.com');
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { email: 'test@example.com' },
       });

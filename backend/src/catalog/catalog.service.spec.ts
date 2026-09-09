@@ -103,6 +103,8 @@ describe('CatalogService', () => {
         price: 30.0,
         marketId: 'market-1',
         categoryId: 'cat-1',
+        stock: 100,
+        minStock: 5,
       };
 
       prisma.product.create.mockResolvedValue(mockProduct);

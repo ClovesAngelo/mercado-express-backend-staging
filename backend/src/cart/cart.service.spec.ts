@@ -162,7 +162,7 @@ describe('CartService', () => {
 
       const result = await cartService.updateCartItem('user-1', 'product-1', 3);
 
-      expect(result.quantity).toBe(3);
+      expect(result?.quantity).toBe(3);
     });
 
     it('should return null when cart does not exist', async () => {

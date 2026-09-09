@@ -3,14 +3,19 @@
  * These are simple factory functions, not complex mocks.
  */
 
+import { UserRole } from '@prisma/client';
+
 export function makeUser(
   overrides?: Partial<{
     id: string;
     email: string;
     name: string;
     password: string;
-    role: string;
+    role: UserRole;
     marketId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt: Date | null;
   }>,
 ) {
   return {
@@ -18,8 +23,11 @@ export function makeUser(
     email: 'test@example.com',
     name: 'Test User',
     password: '$2b$10$hashedpassword',
-    role: 'CLIENTE',
+    role: UserRole.CLIENTE,
     marketId: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    deletedAt: null,
     ...overrides,
   };
 }

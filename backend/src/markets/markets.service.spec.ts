@@ -273,7 +273,11 @@ describe('MarketsService', () => {
       const updatedMarket = { ...mockMarket, name: 'Updated Market' };
       prisma.market.update.mockResolvedValue(updatedMarket);
 
-      const adminUser = { id: 'admin-1', role: 'ADMIN_GERAL' };
+      const adminUser = {
+        id: 'admin-1',
+        role: 'ADMIN_GERAL' as const,
+        email: 'admin@example.com',
+      };
       const result = await marketsService.update(
         'market-1',
         updateData,
@@ -302,8 +306,9 @@ describe('MarketsService', () => {
 
       const gestorUser = {
         id: 'gestor-1',
-        role: 'GESTOR_MERCADO',
+        role: 'GESTOR_MERCADO' as const,
         marketId: 'market-1',
+        email: 'gestor@example.com',
       };
       const result = await marketsService.update(
         'market-1',
@@ -326,7 +331,12 @@ describe('MarketsService', () => {
         marketsService.update(
           'other-market',
           { name: 'Tentativa indevida' },
-          { id: 'gestor-1', role: 'GESTOR_MERCADO', marketId: 'market-1' },
+          {
+            id: 'gestor-1',
+            role: 'GESTOR_MERCADO',
+            marketId: 'market-1',
+            email: 'gestor@example.com',
+          },
         ),
       ).rejects.toThrow(
         'Você só pode atualizar o mercado ao qual está vinculado',

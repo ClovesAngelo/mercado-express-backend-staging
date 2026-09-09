@@ -199,7 +199,12 @@ describe('OrdersService', () => {
       prisma.order.findUnique.mockResolvedValue(order);
       prisma.order.update.mockResolvedValue({ ...order, status: 'CONFIRMED' });
 
-      const adminUser = { id: 'admin-1', role: 'ADMIN_GERAL', marketId: null };
+      const adminUser = {
+        id: 'admin-1',
+        role: 'ADMIN_GERAL',
+        marketId: null,
+        email: 'admin@example.com',
+      };
       const result = await ordersService.updateStatus(
         'order-1',
         'CONFIRMED',
@@ -217,7 +222,12 @@ describe('OrdersService', () => {
     it('should throw ForbiddenException when order does not exist', async () => {
       prisma.order.findUnique.mockResolvedValue(null);
 
-      const adminUser = { id: 'admin-1', role: 'ADMIN_GERAL', marketId: null };
+      const adminUser = {
+        id: 'admin-1',
+        role: 'ADMIN_GERAL',
+        marketId: null,
+        email: 'admin@example.com',
+      };
       await expect(
         ordersService.updateStatus('nonexistent', 'CONFIRMED', adminUser),
       ).rejects.toThrow(ForbiddenException);
@@ -231,6 +241,7 @@ describe('OrdersService', () => {
         id: 'gestor-1',
         role: 'GESTOR_MERCADO',
         marketId: 'my-market',
+        email: 'gestor@example.com',
       };
       await expect(
         ordersService.updateStatus('order-1', 'CONFIRMED', gestorUser),
@@ -250,6 +261,7 @@ describe('OrdersService', () => {
         id: 'gestor-1',
         role: 'GESTOR_MERCADO',
         marketId: 'my-market',
+        email: 'gestor@example.com',
       };
       const result = await ordersService.updateStatus(
         'order-1',
