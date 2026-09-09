@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 
@@ -41,7 +45,12 @@ export class ManagersService {
     return manager;
   }
 
-  async create(data: { name: string; email: string; password: string; marketId?: string | null }) {
+  async create(data: {
+    name: string;
+    email: string;
+    password: string;
+    marketId?: string | null;
+  }) {
     // Verificar se email já existe
     const existingUser = await this.prisma.user.findUnique({
       where: { email: data.email },
@@ -92,7 +101,10 @@ export class ManagersService {
     return manager;
   }
 
-  async update(id: string, data: { name?: string; email?: string; marketId?: string | null }) {
+  async update(
+    id: string,
+    data: { name?: string; email?: string; marketId?: string | null },
+  ) {
     const manager = await this.prisma.user.findUnique({
       where: { id },
       include: { market: true },

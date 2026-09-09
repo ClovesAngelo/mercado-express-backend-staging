@@ -2,20 +2,20 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { createMockPrismaService } from '../../test/helpers/prisma-mock';
+import {
+  createMockPrismaService,
+  MockedPrismaService,
+} from '../../test/helpers/prisma-mock';
 
 describe('OrdersService', () => {
   let ordersService: OrdersService;
-  let prisma: jest.Mocked<PrismaService>;
+  let prisma: MockedPrismaService;
 
   beforeEach(async () => {
     prisma = createMockPrismaService();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        OrdersService,
-        { provide: PrismaService, useValue: prisma },
-      ],
+      providers: [OrdersService, { provide: PrismaService, useValue: prisma }],
     }).compile();
 
     ordersService = module.get<OrdersService>(OrdersService);
@@ -28,7 +28,7 @@ describe('OrdersService', () => {
   const mockProduct = {
     id: 'product-1',
     name: 'Test Product',
-    price: 10.50,
+    price: 10.5,
     marketId: 'market-1',
     market: {
       id: 'market-1',
@@ -62,7 +62,7 @@ describe('OrdersService', () => {
     userId: 'user-1',
     marketId: 'market-1',
     status: 'PENDING',
-    total: 21.00,
+    total: 21.0,
     deliveryFee: 0,
     customerName: null,
     customerPhone: null,
@@ -85,15 +85,15 @@ describe('OrdersService', () => {
         orderId: 'order-1',
         productId: 'product-1',
         productName: 'Test Product',
-        productPrice: 10.50,
+        productPrice: 10.5,
         quantity: 2,
-        subtotal: 21.00,
+        subtotal: 21.0,
         product: {
           id: 'product-1',
           marketId: 'market-1',
           market: { id: 'market-1', name: 'Test Market' },
           name: 'Test Product',
-          price: 10.50,
+          price: 10.5,
         },
       },
     ],
@@ -106,9 +106,7 @@ describe('OrdersService', () => {
 
   describe('create', () => {
     it('should create an order with calculated total', async () => {
-      const items = [
-        { productId: 'product-1', quantity: 2, price: 10.50 },
-      ];
+      const items = [{ productId: 'product-1', quantity: 2, price: 10.5 }];
 
       prisma.product.findUnique.mockResolvedValue(mockProduct);
       prisma.order.create.mockResolvedValue(mockOrder);
@@ -120,7 +118,7 @@ describe('OrdersService', () => {
         include: { market: true },
       });
       expect(prisma.order.create).toHaveBeenCalled();
-      expect(result.total).toBe(21.00);
+      expect(result.total).toBe(21.0);
       expect(result.marketId).toBe('market-1');
     });
 
@@ -128,7 +126,9 @@ describe('OrdersService', () => {
       prisma.product.findUnique.mockResolvedValue(null);
 
       await expect(
-        ordersService.create('user-1', [{ productId: 'nonexistent', quantity: 1, price: 10 }]),
+        ordersService.create('user-1', [
+          { productId: 'nonexistent', quantity: 1, price: 10 },
+        ]),
       ).rejects.toThrow(ForbiddenException);
     });
   });
@@ -200,13 +200,17 @@ describe('OrdersService', () => {
       prisma.order.update.mockResolvedValue({ ...order, status: 'CONFIRMED' });
 
       const adminUser = { id: 'admin-1', role: 'ADMIN_GERAL', marketId: null };
-      const result = await ordersService.updateStatus('order-1', 'CONFIRMED', adminUser);
+      const result = await ordersService.updateStatus(
+        'order-1',
+        'CONFIRMED',
+        adminUser,
+      );
 
       expect(result.status).toBe('CONFIRMED');
       expect(prisma.order.update).toHaveBeenCalledWith({
         where: { id: 'order-1' },
         data: { status: 'CONFIRMED' },
-        include: expect.anything(),
+        include: expect.anything() as never,
       });
     });
 
@@ -223,19 +227,35 @@ describe('OrdersService', () => {
       const order = { ...mockOrder, market: { id: 'other-market' } };
       prisma.order.findUnique.mockResolvedValue(order);
 
-      const gestorUser = { id: 'gestor-1', role: 'GESTOR_MERCADO', marketId: 'my-market' };
+      const gestorUser = {
+        id: 'gestor-1',
+        role: 'GESTOR_MERCADO',
+        marketId: 'my-market',
+      };
       await expect(
         ordersService.updateStatus('order-1', 'CONFIRMED', gestorUser),
       ).rejects.toThrow(ForbiddenException);
     });
 
     it('should allow gestor to update order from their own market', async () => {
-      const order = { ...mockOrder, marketId: 'my-market', market: { id: 'my-market' } };
+      const order = {
+        ...mockOrder,
+        marketId: 'my-market',
+        market: { id: 'my-market' },
+      };
       prisma.order.findUnique.mockResolvedValue(order);
       prisma.order.update.mockResolvedValue({ ...order, status: 'CONFIRMED' });
 
-      const gestorUser = { id: 'gestor-1', role: 'GESTOR_MERCADO', marketId: 'my-market' };
-      const result = await ordersService.updateStatus('order-1', 'CONFIRMED', gestorUser);
+      const gestorUser = {
+        id: 'gestor-1',
+        role: 'GESTOR_MERCADO',
+        marketId: 'my-market',
+      };
+      const result = await ordersService.updateStatus(
+        'order-1',
+        'CONFIRMED',
+        gestorUser,
+      );
 
       expect(result.status).toBe('CONFIRMED');
     });

@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ExecutionContext } from '@nestjs/common';
 import { RolesGuard } from './roles.guard';
 import { Reflector } from '@nestjs/core';
 import { MarketsController } from '../markets/markets.controller';
@@ -40,9 +41,12 @@ describe('RolesGuard', () => {
       switchToHttp: () => ({
         getRequest: () => ({ user: { role: UserRole.CLIENTE } }),
       }),
-      getHandler: () => MarketsController.prototype.findAll,
+      getHandler: () =>
+        MarketsController.prototype.findAll.bind(
+          MarketsController.prototype,
+        ) as never,
       getClass: () => MarketsController,
-    } as any;
+    } as unknown as ExecutionContext;
 
     expect(guard.canActivate(mockContext)).toBe(true);
   });

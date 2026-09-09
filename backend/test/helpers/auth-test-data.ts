@@ -3,14 +3,16 @@
  * These are simple factory functions, not complex mocks.
  */
 
-export function makeUser(overrides?: Partial<{
-  id: string;
-  email: string;
-  name: string;
-  password: string;
-  role: string;
-  marketId: string | null;
-}>) {
+export function makeUser(
+  overrides?: Partial<{
+    id: string;
+    email: string;
+    name: string;
+    password: string;
+    role: string;
+    marketId: string | null;
+  }>,
+) {
   return {
     id: 'user-123',
     email: 'test@example.com',
@@ -22,7 +24,9 @@ export function makeUser(overrides?: Partial<{
   };
 }
 
-export function makeLoginDto(overrides?: Partial<{ email: string; password: string }>) {
+export function makeLoginDto(
+  overrides?: Partial<{ email: string; password: string }>,
+) {
   return {
     email: 'test@example.com',
     password: 'correct-password',
@@ -30,12 +34,14 @@ export function makeLoginDto(overrides?: Partial<{ email: string; password: stri
   };
 }
 
-export function makeRegisterDto(overrides?: Partial<{
-  email: string;
-  name: string;
-  password: string;
-  role: string;
-}>) {
+export function makeRegisterDto(
+  overrides?: Partial<{
+    email: string;
+    name: string;
+    password: string;
+    role: string;
+  }>,
+) {
   return {
     email: 'newuser@example.com',
     name: 'New User',
@@ -45,12 +51,14 @@ export function makeRegisterDto(overrides?: Partial<{
   };
 }
 
-export function makeJwtPayload(overrides?: Partial<{
-  email: string;
-  sub: string;
-  role: string;
-  marketId: string | null;
-}>) {
+export function makeJwtPayload(
+  overrides?: Partial<{
+    email: string;
+    sub: string;
+    role: string;
+    marketId: string | null;
+  }>,
+) {
   return {
     email: 'test@example.com',
     sub: 'user-123',

@@ -1,76 +1,81 @@
 import { PrismaService } from '../../src/prisma/prisma.service';
 
+export interface PrismaModelMock {
+  findUnique: jest.Mock;
+  findMany: jest.Mock;
+  create: jest.Mock;
+  update: jest.Mock;
+  delete: jest.Mock;
+  updateMany: jest.Mock;
+  upsert: jest.Mock;
+  createMany: jest.Mock;
+}
+
+export interface MockedPrismaService {
+  $transaction: jest.Mock;
+  $connect: jest.Mock;
+  $disconnect: jest.Mock;
+  user: PrismaModelMock;
+  market: PrismaModelMock;
+  product: PrismaModelMock;
+  category: PrismaModelMock;
+  cart: PrismaModelMock;
+  cartItem: PrismaModelMock;
+  order: PrismaModelMock;
+  orderItem: PrismaModelMock;
+  auditLog: PrismaModelMock;
+  productImage: PrismaModelMock;
+}
+
+const jestFn = (): jest.Mock => jest.fn();
+
+function createModelMock(): PrismaModelMock {
+  return {
+    findUnique: jestFn(),
+    findMany: jestFn(),
+    create: jestFn(),
+    update: jestFn(),
+    delete: jestFn(),
+    updateMany: jestFn(),
+    upsert: jestFn(),
+    createMany: jestFn(),
+  };
+}
+
 /**
  * Creates a mock PrismaService with all models available as jest.fn().
  * Only the models/functions needed for a specific test should be mocked.
  */
-export function createMockPrismaService(overrides?: Partial<PrismaService>): jest.Mocked<PrismaService> {
-  const defaultMock = {
-    $transaction: jest.fn((fn: any) => fn(defaultMock)) as any,
-    $connect: jest.fn(),
-    $disconnect: jest.fn(),
-    user: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-      updateMany: jest.fn(),
-    },
-    market: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
-    product: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-    },
-    category: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
-    cart: {
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
-    },
-    cartItem: {
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
-      delete: jest.fn(),
-    },
-    order: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-    },
-    orderItem: {
-      create: jest.fn(),
-      createMany: jest.fn(),
-    },
-    auditLog: {
-      create: jest.fn(),
-    },
-    productImage: {
-      findMany: jest.fn(),
-    },
-  } as any;
+export function createMockPrismaService(): MockedPrismaService {
+  const defaultMock: MockedPrismaService = {
+    $transaction: jestFn((fn: (tx: MockedPrismaService) => unknown) =>
+      fn(defaultMock),
+    ),
+    $connect: jestFn(),
+    $disconnect: jestFn(),
+    user: createModelMock(),
+    market: createModelMock(),
+    product: createModelMock(),
+    category: createModelMock(),
+    cart: createModelMock(),
+    cartItem: createModelMock(),
+    order: createModelMock(),
+    orderItem: createModelMock(),
+    auditLog: createModelMock(),
+    productImage: createModelMock(),
+  };
 
-  return Object.assign(defaultMock, overrides || {}) as jest.Mocked<PrismaService>;
+  return defaultMock;
 }
 
 /**
  * Helper to create a transaction proxy that delegates to the same mock methods.
  */
-export function createTxMock(prisma: jest.Mocked<PrismaService>): jest.Mocked<PrismaService> {
-  const tx = { ...prisma };
-  return tx;
+export function createTxMock(
+  prisma: MockedPrismaService,
+): MockedPrismaService {
+  return { ...prisma };
 }
+
+// Keeps the type import used by consumers of this module in sync with PrismaService
+export type { PrismaService };

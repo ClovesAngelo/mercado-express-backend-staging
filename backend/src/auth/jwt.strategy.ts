@@ -3,6 +3,14 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
+import type { AuthenticatedUser } from '../types/express';
+
+interface JwtPayload {
+  sub: string;
+  email: string;
+  role: AuthenticatedUser['role'];
+  marketId?: string | null;
+}
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -17,7 +25,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: any) {
-    return { id: payload.sub, email: payload.email, role: payload.role, marketId: payload.marketId };
+  validate(payload: JwtPayload): AuthenticatedUser {
+    return {
+      id: payload.sub,
+      email: payload.email,
+      role: payload.role,
+      marketId: payload.marketId ?? null,
+    };
   }
 }

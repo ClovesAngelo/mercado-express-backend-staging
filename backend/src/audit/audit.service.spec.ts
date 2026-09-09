@@ -1,20 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuditService } from './audit.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { createMockPrismaService } from '../../test/helpers/prisma-mock';
+import {
+  createMockPrismaService,
+  MockedPrismaService,
+} from '../../test/helpers/prisma-mock';
 
 describe('AuditService', () => {
   let auditService: AuditService;
-  let prisma: jest.Mocked<PrismaService>;
+  let prisma: MockedPrismaService;
 
   beforeEach(async () => {
     prisma = createMockPrismaService();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AuditService,
-        { provide: PrismaService, useValue: prisma },
-      ],
+      providers: [AuditService, { provide: PrismaService, useValue: prisma }],
     }).compile();
 
     auditService = module.get<AuditService>(AuditService);
@@ -61,7 +61,11 @@ describe('AuditService', () => {
     });
 
     it('should not include password in oldValues or newValues', async () => {
-      prisma.auditLog.create.mockResolvedValue({ id: 'log-1', ...auditParams, createdAt: new Date() });
+      prisma.auditLog.create.mockResolvedValue({
+        id: 'log-1',
+        ...auditParams,
+        createdAt: new Date(),
+      });
 
       await auditService.log({
         ...auditParams,
@@ -71,20 +75,41 @@ describe('AuditService', () => {
 
       // The service just passes through whatever is given - the responsibility
       // to filter passwords is on the caller. Verify the data was passed correctly.
-      const callData = (prisma.auditLog.create as jest.Mock).mock.calls[0][0].data;
+      const firstCallArg = (
+        prisma.auditLog.create.mock.calls as unknown[][]
+      )[0][0] as {
+        data?: {
+          oldValues?: unknown;
+          newValues?: unknown;
+          [key: string]: unknown;
+        };
+      };
+      const callData = firstCallArg.data ?? {};
       expect(callData.oldValues).toEqual({ password: 'secret' });
       expect(callData.newValues).toEqual({ password: 'new-secret' });
     });
 
     it('should not include token in audit data', async () => {
-      prisma.auditLog.create.mockResolvedValue({ id: 'log-1', ...auditParams, createdAt: new Date() });
+      prisma.auditLog.create.mockResolvedValue({
+        id: 'log-1',
+        ...auditParams,
+        createdAt: new Date(),
+      });
 
       await auditService.log({
         ...auditParams,
         newValues: { access_token: 'jwt-token' },
       });
 
-      const callData = (prisma.auditLog.create as jest.Mock).mock.calls[0][0].data;
+      const firstCallArg = (
+        prisma.auditLog.create.mock.calls as unknown[][]
+      )[0][0] as {
+        data?: {
+          newValues?: unknown;
+          [key: string]: unknown;
+        };
+      };
+      const callData = firstCallArg.data ?? {};
       // The service does not filter tokens - that responsibility is on the caller
       // But we document this behavior
       expect(callData.newValues).toHaveProperty('access_token');

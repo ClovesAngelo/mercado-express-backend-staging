@@ -6,17 +6,25 @@ export class HealthController {
   constructor(private prisma: PrismaService) {}
 
   @Get('live')
-  async checkLiveness() {
+  checkLiveness(): { status: string; timestamp: string } {
     return { status: 'ok', timestamp: new Date().toISOString() };
   }
 
   @Get('ready')
-  async checkReadiness() {
+  async checkReadiness(): Promise<Record<string, string>> {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
-      return { status: 'ready', database: 'connected', timestamp: new Date().toISOString() };
-    } catch (error) {
-      return { status: 'error', database: 'disconnected', timestamp: new Date().toISOString() };
+      return {
+        status: 'ready',
+        database: 'connected',
+        timestamp: new Date().toISOString(),
+      };
+    } catch {
+      return {
+        status: 'error',
+        database: 'disconnected',
+        timestamp: new Date().toISOString(),
+      };
     }
   }
 }

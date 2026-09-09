@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -14,8 +15,8 @@ export class AuditService {
     action: string;
     entity: string;
     entityId?: string;
-    oldValues?: any;
-    newValues?: any;
+    oldValues?: unknown;
+    newValues?: unknown;
     ipAddress?: string;
     userAgent?: string;
   }) {
@@ -28,14 +29,16 @@ export class AuditService {
           action: params.action,
           entity: params.entity,
           entityId: params.entityId,
-          oldValues: params.oldValues,
-          newValues: params.newValues,
+          oldValues: params.oldValues as Prisma.InputJsonValue | undefined,
+          newValues: params.newValues as Prisma.InputJsonValue | undefined,
           ipAddress: params.ipAddress,
           userAgent: params.userAgent,
         },
       });
     } catch (error) {
-      this.logger.error(`Failed to create audit log: ${(error as Error).message}`);
+      this.logger.error(
+        `Failed to create audit log: ${(error as Error).message}`,
+      );
     }
   }
 }

@@ -3,7 +3,10 @@ import { NotFoundException, ConflictException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { ManagersService } from './managers.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { createMockPrismaService } from '../../test/helpers/prisma-mock';
+import {
+  createMockPrismaService,
+  MockedPrismaService,
+} from '../../test/helpers/prisma-mock';
 
 jest.mock('bcrypt', () => ({
   hash: jest.fn(),
@@ -11,7 +14,7 @@ jest.mock('bcrypt', () => ({
 
 describe('ManagersService', () => {
   let managersService: ManagersService;
-  let prisma: jest.Mocked<PrismaService>;
+  let prisma: MockedPrismaService;
 
   beforeEach(async () => {
     prisma = createMockPrismaService();
@@ -60,7 +63,7 @@ describe('ManagersService', () => {
           name: true,
           role: true,
           marketId: true,
-        }),
+        }) as never,
         orderBy: { createdAt: 'desc' },
       });
     });
@@ -78,7 +81,9 @@ describe('ManagersService', () => {
     it('should throw NotFoundException when manager does not exist', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
-      await expect(managersService.findOne('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(managersService.findOne('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -113,7 +118,7 @@ describe('ManagersService', () => {
           name: true,
           role: true,
           marketId: true,
-        }),
+        }) as never,
       });
       expect(result).toEqual(mockManager);
     });
@@ -121,7 +126,9 @@ describe('ManagersService', () => {
     it('should throw ConflictException when email already exists', async () => {
       prisma.user.findUnique.mockResolvedValue(mockManager); // existing user
 
-      await expect(managersService.create(createDto)).rejects.toThrow(ConflictException);
+      await expect(managersService.create(createDto)).rejects.toThrow(
+        ConflictException,
+      );
     });
 
     it('should throw NotFoundException when marketId does not exist', async () => {
@@ -129,7 +136,10 @@ describe('ManagersService', () => {
       prisma.market.findUnique.mockResolvedValue(null);
 
       await expect(
-        managersService.create({ ...createDto, marketId: 'nonexistent-market' }),
+        managersService.create({
+          ...createDto,
+          marketId: 'nonexistent-market',
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -140,7 +150,7 @@ describe('ManagersService', () => {
       (bcrypt.hash as jest.Mock).mockResolvedValue('$2b$10$hash');
       prisma.user.create.mockResolvedValue(mockManagerWithMarket);
 
-      const result = await managersService.create({
+      await managersService.create({
         ...createDto,
         marketId: 'market-1',
       });
@@ -149,7 +159,7 @@ describe('ManagersService', () => {
         expect.objectContaining({
           data: expect.objectContaining({
             marketId: 'market-1',
-          }),
+          }) as never,
         }),
       );
     });
@@ -164,7 +174,12 @@ describe('ManagersService', () => {
     it('should update a manager', async () => {
       prisma.user.findUnique.mockResolvedValueOnce(mockManager);
       prisma.user.findUnique.mockResolvedValueOnce(null); // email not in use
-      prisma.user.update.mockResolvedValue({ ...mockManager, name: 'Updated Manager', email: 'updated@example.com', market: null });
+      prisma.user.update.mockResolvedValue({
+        ...mockManager,
+        name: 'Updated Manager',
+        email: 'updated@example.com',
+        market: null,
+      });
 
       const result = await managersService.update('manager-1', updateDto);
 
@@ -175,14 +190,21 @@ describe('ManagersService', () => {
     it('should throw NotFoundException when manager does not exist', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
-      await expect(managersService.update('nonexistent', updateDto)).rejects.toThrow(NotFoundException);
+      await expect(
+        managersService.update('nonexistent', updateDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ConflictException when email is already in use', async () => {
       prisma.user.findUnique.mockResolvedValueOnce(mockManager);
-      prisma.user.findUnique.mockResolvedValueOnce({ id: 'other-user', email: 'updated@example.com' });
+      prisma.user.findUnique.mockResolvedValueOnce({
+        id: 'other-user',
+        email: 'updated@example.com',
+      });
 
-      await expect(managersService.update('manager-1', { email: 'updated@example.com' })).rejects.toThrow(ConflictException);
+      await expect(
+        managersService.update('manager-1', { email: 'updated@example.com' }),
+      ).rejects.toThrow(ConflictException);
     });
   });
 
@@ -198,13 +220,17 @@ describe('ManagersService', () => {
         where: { id: 'market-1' },
         data: { managerId: null },
       });
-      expect(prisma.user.delete).toHaveBeenCalledWith({ where: { id: 'manager-1' } });
+      expect(prisma.user.delete).toHaveBeenCalledWith({
+        where: { id: 'manager-1' },
+      });
     });
 
     it('should throw NotFoundException when manager does not exist', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
-      await expect(managersService.remove('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(managersService.remove('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });
