@@ -1,0 +1,36 @@
+# Render Blueprint — Mercado Express Backend (staging)
+# https://render.com/docs/blueprint-spec
+#
+# NOTAS:
+# - Este blueprint aplica las migrations de Prisma de forma automática en cada
+#   deploy (prisma migrate deploy), garantizando que el schema esté al día.
+# - Las variables secretas (DATABASE_URL, JWT_SECRET, etc.) se configuran en el
+#   dashboard de Render (sync: false) y NO deben commitearse aquí.
+# - Si la base está en Supabase y el deploy falla con timeout/crash al arrancar,
+#   usa como DATABASE_URL el pooler IPv4 (session pooler) del dashboard de
+#   Supabase: postgresql://postgres.<ref>:<pass>@aws-0-<region>.pooler.supabase.com:5432/postgres
+#   (el host directo db.<ref>.supabase.co requiere IPv6, no disponible en Render).
+
+services:
+  - type: web
+    name: mercado-express-backend-staging
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install && npm run prisma:generate && npm run prisma:migrate:deploy && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /health/live
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
