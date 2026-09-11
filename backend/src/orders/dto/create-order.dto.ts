@@ -7,6 +7,7 @@ import {
   IsArray,
   ValidateNested,
   IsEnum,
+  IsPhoneNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { FulfillmentType, PaymentMethod } from '@prisma/client';
@@ -39,9 +40,8 @@ export class CreateOrderDto {
   @IsOptional()
   customerName?: string;
 
-  @IsString()
-  @IsOptional()
-  customerPhone?: string;
+  @IsPhoneNumber('BR', { message: 'Informe um WhatsApp brasileiro válido.' })
+  customerPhone!: string;
 
   @IsString()
   @IsOptional()

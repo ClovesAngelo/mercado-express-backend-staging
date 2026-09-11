@@ -55,6 +55,7 @@ export default function Checkout() {
 
   // Dados do comprador
   const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [zipCode, setZipCode] = useState('');
   const [street, setStreet] = useState('');
   const [number, setNumber] = useState('');
@@ -239,7 +240,7 @@ export default function Checkout() {
     try {
       const orderData: any = {
         customerName,
-        customerPhone: '',
+        customerPhone,
         zipCode,
         street,
         number,
@@ -361,6 +362,18 @@ export default function Checkout() {
                 required
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
+            </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp *</label>
+              <input
+                type="tel"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                placeholder="(00) 00000-0000"
+                required
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">Enviaremos a confirmação do pedido neste número.</p>
             </div>
           </div>
 

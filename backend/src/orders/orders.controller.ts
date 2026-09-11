@@ -20,6 +20,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { UserRole } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
+import { WhatsAppService } from '../whatsapp/whatsapp.service';
 import type { Request } from 'express';
 
 @Controller('orders')
@@ -30,6 +31,7 @@ export class OrdersController {
     private ordersService: OrdersService,
     private prisma: PrismaService,
     private auditService: AuditService,
+    private whatsappService: WhatsAppService,
   ) {}
 
   @Post('from-cart')
@@ -58,6 +60,8 @@ export class OrdersController {
       }));
 
       const order = await this.ordersService.create(userId, items, body);
+
+      this.whatsappService.sendOrderConfirmation(order).catch(() => undefined);
 
       // Limpar carrinho
       await this.prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
