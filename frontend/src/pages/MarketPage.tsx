@@ -31,6 +31,7 @@ interface Market extends MarketData {
   description: string;
   phone: string;
   whatsapp: string;
+  imageUrl?: string;
   logoUrl: string;
   bannerUrl: string;
   isOpenNow?: boolean;
@@ -171,6 +172,9 @@ export default function MarketPage() {
 
   const isOpen = isMarketOpen();
 
+  // Foto de capa: banner da gestão > imagem legada do mercado
+  const headerPhoto = market.bannerUrl || market.imageUrl || '';
+
   return (
     <div>
       {/* Status Banner */}
@@ -181,10 +185,10 @@ export default function MarketPage() {
       )}
 
       {/* Banner */}
-      {market.bannerUrl && (
+      {headerPhoto && (
         <div className="relative h-48 w-full overflow-hidden rounded-2xl sm:h-64">
           <img
-            src={market.bannerUrl}
+            src={headerPhoto}
             alt={market.name}
             className="h-full w-full object-cover"
             onError={(e) => {
@@ -196,7 +200,7 @@ export default function MarketPage() {
       )}
 
       {/* Header do Mercado */}
-      <div className={`${market.bannerUrl ? '-mt-10 relative z-10' : 'mt-0'} mb-6`}>
+      <div className={`${headerPhoto ? '-mt-10 relative z-10' : 'mt-0'} mb-6`}>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex items-start gap-4 sm:gap-6">
             {/* Logo */}

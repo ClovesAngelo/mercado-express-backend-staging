@@ -10,12 +10,23 @@ interface Market extends MarketData {
   name: string;
   address: string;
   imageUrl: string | null;
+  logoUrl?: string | null;
+  bannerUrl?: string | null;
   description?: string;
   phone?: string;
   isOpenNow?: boolean;
   deliveryAvailableNow?: boolean;
   pickupAvailableNow?: boolean;
   unavailableReason?: string | null;
+}
+
+/**
+ * Foto de apresentação do mercado nos cards da tela inicial.
+ * Prioridade: banner (editado na gestão) > imageUrl (legado) > logo.
+ * Assim, a foto trocada pelo gestor na gestão de mercado reflete aqui.
+ */
+function getMarketPhoto(market: Pick<Market, 'bannerUrl' | 'imageUrl' | 'logoUrl'>): string | null {
+  return market.bannerUrl || market.imageUrl || market.logoUrl || null;
 }
 
 function MarketPlaceholder() {
@@ -101,15 +112,21 @@ export default function Home() {
             >
               {/* Image */}
               <div className="relative h-44 overflow-hidden bg-slate-100 sm:h-48">
-                {market.imageUrl ? (
-                  <img
-                    src={market.imageUrl}
-                    alt={market.name}
-                    className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                  />
-                ) : (
-                  <MarketPlaceholder />
-                )}
+                {(() => {
+                  const marketPhoto = getMarketPhoto(market);
+                  return marketPhoto ? (
+                    <img
+                      src={marketPhoto}
+                      alt={market.name}
+                      className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <MarketPlaceholder />
+                  );
+                })()}
                 {market.isOpenNow !== undefined && (
                   <div className="absolute right-2 top-2">
                     <span
