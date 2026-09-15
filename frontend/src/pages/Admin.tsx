@@ -434,6 +434,7 @@ export default function Admin() {
                         <ImageUpload
                           value={formData.imageUrl}
                           onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+                          aspect={4 / 3}
                         />
                       </div>
                       <div className="md:col-span-2">

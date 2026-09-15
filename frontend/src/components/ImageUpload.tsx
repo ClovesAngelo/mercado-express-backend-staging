@@ -1,25 +1,38 @@
 import { useState, useRef } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { uploadService } from '../services/upload.service';
+import ImageCropModal from './ImageCropModal';
+import { blobToFile, type CroppedImage } from '../utils/imageCrop';
 
 interface ImageUploadProps {
   value?: string;
   onChange: (url: string) => void;
   disabled?: boolean;
+  /** Proporção recomendada do corte (padrão 4/3). Use 1 para logo/quadrado e 3 para banner. */
+  aspect?: number;
 }
 
-export default function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
+const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+
+export default function ImageUpload({
+  value,
+  onChange,
+  disabled,
+  aspect = 4 / 3,
+}: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(value || null);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     // Validar tipo de arquivo
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
+    if (!ALLOWED_TYPES.includes(file.type)) {
       alert('Tipo de arquivo não permitido. Use JPG, PNG ou WEBP.');
       return;
     }
@@ -30,15 +43,51 @@ export default function ImageUpload({ value, onChange, disabled }: ImageUploadPr
       return;
     }
 
+    setSelectedFile(file);
+    setCropImageSrc(URL.createObjectURL(file));
+    setCropModalOpen(true);
+  };
+
+  const clearCropSource = () => {
+    if (cropImageSrc) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
+    setCropImageSrc(null);
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCropCancel = () => {
+    setCropModalOpen(false);
+    clearCropSource();
+  };
+
+  const handleCropConfirm = async (cropped: CroppedImage) => {
+    setCropModalOpen(false);
+
+    const file = selectedFile;
+    const croppedFile = blobToFile(
+      cropped.blob,
+      file?.name || 'imagem',
+      cropped.mime,
+    );
+    clearCropSource();
+
+    // Preview local com a imagem já cortada
+    let localPreview: string | null = null;
     setUploading(true);
     try {
-      // Criar preview local
-      const localPreview = URL.createObjectURL(file);
+      localPreview = URL.createObjectURL(cropped.blob);
       setPreview(localPreview);
 
       // Fazer upload via backend
-      const imageUrl = await uploadService.uploadProductImage(file);
-      
+      const imageUrl = await uploadService.uploadProductImage(croppedFile);
+
+      if (localPreview) {
+        URL.revokeObjectURL(localPreview);
+      }
       setPreview(imageUrl);
       onChange(imageUrl);
     } catch (error) {
@@ -48,10 +97,10 @@ export default function ImageUpload({ value, onChange, disabled }: ImageUploadPr
       onChange(''); // Limpa a URL da imagem
       alert('Upload da imagem falhou. O mercado será criado sem imagem.');
     } finally {
-      setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      if (localPreview) {
+        URL.revokeObjectURL(localPreview);
       }
+      setUploading(false);
     }
   };
 
@@ -128,6 +177,17 @@ export default function ImageUpload({ value, onChange, disabled }: ImageUploadPr
           )}
         </button>
       )}
+
+      <ImageCropModal
+        open={cropModalOpen}
+        imageSrc={cropImageSrc || ''}
+        aspect={aspect}
+        preferredMime={selectedFile?.type}
+        onCancel={handleCropCancel}
+        onConfirm={handleCropConfirm}
+        title="Ajustar o corte da imagem"
+        description="Escolha a área que deve ser exibida. Ela será o recorte final enviado."
+      />
     </div>
   );
 }

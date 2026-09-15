@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { productService, Category, ProductImage } from '../services/product.service';
 import { uploadService } from '../services/upload.service';
+import ImageCropModal from '../components/ImageCropModal';
+import { blobToFile, type CroppedImage } from '../utils/imageCrop';
 import { Package, Upload, Image, ChevronLeft, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function CreateProduct() {
@@ -29,6 +31,8 @@ export default function CreateProduct() {
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isGestor || !user?.marketId) {
@@ -85,15 +89,39 @@ export default function CreateProduct() {
         setError('Por favor, selecione apenas arquivos de imagem');
         return;
       }
+      if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
+        setError('Tipo de arquivo não permitido. Use JPG, PNG ou WEBP.');
+        return;
+      }
       if (file.size > 5 * 1024 * 1024) {
         setError('A imagem deve ter no máximo 5MB');
         return;
       }
       setSelectedImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      const src = URL.createObjectURL(file);
+      setImagePreview(src);
+      setCropImageSrc(src);
+      setCropModalOpen(true);
       setFormData(prev => ({ ...prev, imageUrl: '' }));
       setError('');
     }
+  };
+
+  const handleCropCancel = () => {
+    setCropModalOpen(false);
+    setCropImageSrc(null);
+  };
+
+  const handleCropConfirmed = async (cropped: CroppedImage) => {
+    const file = blobToFile(
+      cropped.blob,
+      selectedImageFile?.name || 'produto',
+      cropped.mime,
+    );
+    setSelectedImageFile(file);
+    setImagePreview(URL.createObjectURL(cropped.blob));
+    setCropModalOpen(false);
+    setError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -497,6 +525,17 @@ export default function CreateProduct() {
           </div>
         </form>
       </div>
+
+      <ImageCropModal
+        open={cropModalOpen}
+        imageSrc={cropImageSrc || ''}
+        aspect={1}
+        preferredMime={selectedImageFile?.type}
+        onCancel={handleCropCancel}
+        onConfirm={handleCropConfirmed}
+        title="Ajustar a foto do produto"
+        description="Posicione o produto dentro do enquadramento quadrado antes de enviar."
+      />
     </div>
   );
 }

@@ -845,6 +845,7 @@ export default function Manager() {
                 <ImageUpload
                   value={editFormData.logoUrl}
                   onChange={(url) => setEditFormData({ ...editFormData, logoUrl: url })}
+                  aspect={1}
                 />
               </div>
 
@@ -855,6 +856,7 @@ export default function Manager() {
                 <ImageUpload
                   value={editFormData.bannerUrl}
                   onChange={(url) => setEditFormData({ ...editFormData, bannerUrl: url })}
+                  aspect={3}
                 />
               </div>
 
