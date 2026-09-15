@@ -851,6 +851,17 @@ export default function Manager() {
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Foto do Card (Tela Inicial)
+                </label>
+                <ImageUpload
+                  value={editFormData.imageUrl}
+                  onChange={(url) => setEditFormData({ ...editFormData, imageUrl: url })}
+                  aspect={4 / 3}
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Logo do Mercado
                 </label>
                 <ImageUpload

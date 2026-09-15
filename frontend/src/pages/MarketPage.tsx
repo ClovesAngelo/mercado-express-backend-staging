@@ -186,7 +186,7 @@ export default function MarketPage() {
 
       {/* Banner */}
       {headerPhoto && (
-        <div className="relative h-48 w-full overflow-hidden rounded-2xl sm:h-64">
+        <div className="relative aspect-[3/1] w-full overflow-hidden rounded-2xl">
           <img
             src={headerPhoto}
             alt={market.name}
@@ -331,7 +331,7 @@ export default function MarketPage() {
                   key={product.id}
                   className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
                 >
-                  <div className="relative h-40 overflow-hidden bg-slate-100 sm:h-44">
+                  <div className="relative aspect-square w-full overflow-hidden bg-slate-100">
                     {product.imageUrl ? (
                       <img
                         src={product.imageUrl}

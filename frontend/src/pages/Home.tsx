@@ -22,11 +22,11 @@ interface Market extends MarketData {
 
 /**
  * Foto de apresentação do mercado nos cards da tela inicial.
- * Prioridade: banner (editado na gestão) > imageUrl (legado) > logo.
- * Assim, a foto trocada pelo gestor na gestão de mercado reflete aqui.
+ * Prioridade: imageUrl (Imagem do Mercado, corte 4:3) > banner (3:1) > logo (1:1).
+ * O card é exibido em 4:3 (igual ao corte aplicado no upload), evitando recorte novo.
  */
 function getMarketPhoto(market: Pick<Market, 'bannerUrl' | 'imageUrl' | 'logoUrl'>): string | null {
-  return market.bannerUrl || market.imageUrl || market.logoUrl || null;
+  return market.imageUrl || market.bannerUrl || market.logoUrl || null;
 }
 
 function MarketPlaceholder() {
@@ -111,7 +111,7 @@ export default function Home() {
               className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
               {/* Image */}
-              <div className="relative h-44 overflow-hidden bg-slate-100 sm:h-48">
+              <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
                 {(() => {
                   const marketPhoto = getMarketPhoto(market);
                   return marketPhoto ? (
