@@ -54,6 +54,7 @@ export class MarketsController {
       }
       return result;
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR creating market: ${(error as Error).message}`,
         (error as Error).stack,
@@ -71,6 +72,7 @@ export class MarketsController {
     try {
       return await this.marketsService.findAll();
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR fetching markets: ${(error as Error).message}`,
         (error as Error).stack,
@@ -88,6 +90,7 @@ export class MarketsController {
     try {
       return await this.marketsService.findAllWithManager();
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR fetching markets with manager: ${(error as Error).message}`,
         (error as Error).stack,
@@ -140,6 +143,7 @@ export class MarketsController {
       }
       return result;
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR creating market with manager: ${(error as Error).message}`,
         (error as Error).stack,
@@ -156,11 +160,16 @@ export class MarketsController {
   async findOne(@Param('id') id: string, @Req() req: Request) {
     try {
       const user = req.user;
-      if (user?.role === UserRole.CLIENTE) {
-        return await this.marketsService.findOnePublic(id);
+      const market =
+        user?.role === UserRole.CLIENTE
+          ? await this.marketsService.findOnePublic(id)
+          : await this.marketsService.findOne(id);
+      if (!market) {
+        throw new HttpException('Mercado não encontrado', HttpStatus.NOT_FOUND);
       }
-      return await this.marketsService.findOne(id);
+      return market;
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR fetching market: ${(error as Error).message}`,
         (error as Error).stack,
@@ -178,6 +187,7 @@ export class MarketsController {
     try {
       return await this.marketsService.setActive(id, true);
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR activating market: ${(error as Error).message}`,
         (error as Error).stack,
@@ -195,6 +205,7 @@ export class MarketsController {
     try {
       return await this.marketsService.setActive(id, false);
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR deactivating market: ${(error as Error).message}`,
         (error as Error).stack,
@@ -212,6 +223,7 @@ export class MarketsController {
     try {
       return await this.marketsService.remove(id);
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR deleting market: ${(error as Error).message}`,
         (error as Error).stack,
@@ -234,6 +246,7 @@ export class MarketsController {
       const user = req.user;
       return await this.marketsService.update(id, updateData, user!);
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR updating market: ${(error as Error).message}`,
         (error as Error).stack,

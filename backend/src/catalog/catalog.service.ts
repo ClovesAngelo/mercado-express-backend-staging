@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { rethrowPrismaError } from '../prisma/prisma-error.utils';
 import { AuthenticatedUser } from '../types/express';
 import {
   CreateProductDto,
@@ -121,21 +122,30 @@ export class CatalogService {
     user: AuthenticatedUser,
   ) {
     await this.assertProductAccess(id, user);
-    return this.prisma.product.update({
-      where: { id },
-      data: updateProductDto,
-      include: {
-        category: true,
-      },
-    });
+    try {
+      return await this.prisma.product.update({
+        where: { id },
+        data: updateProductDto,
+        include: {
+          category: true,
+        },
+      });
+    } catch (error) {
+      // Corrida: produto removido entre a checagem e o update
+      rethrowPrismaError(error, { notFoundMessage: 'Produto não encontrado' });
+    }
   }
 
   async deleteProduct(id: string, user: AuthenticatedUser) {
     await this.assertProductAccess(id, user);
-    return this.prisma.product.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
+    try {
+      return await this.prisma.product.update({
+        where: { id },
+        data: { deletedAt: new Date() },
+      });
+    } catch (error) {
+      rethrowPrismaError(error, { notFoundMessage: 'Produto não encontrado' });
+    }
   }
 
   async updateStock(
@@ -144,16 +154,20 @@ export class CatalogService {
     user: AuthenticatedUser,
   ) {
     await this.assertProductAccess(id, user);
-    return this.prisma.product.update({
-      where: { id },
-      data: {
-        stock: stockData.stock,
-        minStock: stockData.minStock,
-      },
-      include: {
-        category: true,
-      },
-    });
+    try {
+      return await this.prisma.product.update({
+        where: { id },
+        data: {
+          stock: stockData.stock,
+          minStock: stockData.minStock,
+        },
+        include: {
+          category: true,
+        },
+      });
+    } catch (error) {
+      rethrowPrismaError(error, { notFoundMessage: 'Produto não encontrado' });
+    }
   }
 
   async createCategory(createCategoryDto: Prisma.CategoryUncheckedCreateInput) {
@@ -169,19 +183,31 @@ export class CatalogService {
     id: string,
     updateCategoryDto: Prisma.CategoryUncheckedUpdateInput,
   ) {
-    return this.prisma.category.update({
-      where: { id },
-      data: updateCategoryDto,
-      include: {
-        products: true,
-      },
-    });
+    try {
+      return await this.prisma.category.update({
+        where: { id },
+        data: updateCategoryDto,
+        include: {
+          products: true,
+        },
+      });
+    } catch (error) {
+      rethrowPrismaError(error, {
+        notFoundMessage: 'Categoria não encontrada',
+      });
+    }
   }
 
   async deleteCategory(id: string) {
-    return this.prisma.category.delete({
-      where: { id },
-    });
+    try {
+      return await this.prisma.category.delete({
+        where: { id },
+      });
+    } catch (error) {
+      rethrowPrismaError(error, {
+        notFoundMessage: 'Categoria não encontrada',
+      });
+    }
   }
 
   async getProductImagesLibrary() {

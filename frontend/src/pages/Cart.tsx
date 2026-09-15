@@ -29,11 +29,13 @@ export default function Cart() {
   const navigate = useNavigate();
 
   const loadCart = useCallback(() => {
+    setError('');
     api.get('/cart').then(({ data }) => {
       setCart(data || {});
       setLoading(false);
     }).catch(() => {
       setCart({});
+      setError('Erro ao carregar o carrinho. Tente novamente em instantes.');
       setLoading(false);
     });
   }, []);

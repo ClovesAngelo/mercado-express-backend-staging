@@ -63,8 +63,16 @@ export class OrdersController {
 
       this.whatsappService.sendOrderConfirmation(order).catch(() => undefined);
 
-      // Limpar carrinho
-      await this.prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+      // Limpar carrinho — se a limpeza falhar o pedido já foi criado, então
+      // registramos o erro e mantemos o sucesso na resposta.
+      try {
+        await this.prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+      } catch (error) {
+        this.logger.error(
+          `ERROR clearing cart after order creation: ${(error as Error).message}`,
+          (error as Error).stack,
+        );
+      }
 
       const user = req.user;
       if (user) {
@@ -107,6 +115,7 @@ export class OrdersController {
       const userId = req.user!.id;
       return await this.ordersService.findByUser(userId);
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR fetching my orders: ${(error as Error).message}`,
         (error as Error).stack,
@@ -131,6 +140,7 @@ export class OrdersController {
       }
       return [];
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR fetching orders: ${(error as Error).message}`,
         (error as Error).stack,
@@ -148,10 +158,11 @@ export class OrdersController {
     try {
       const user = req.user!;
       if (user.role === 'GESTOR_MERCADO' && marketId !== user.marketId) {
-        throw new Error('Acesso negado');
+        throw new HttpException('Acesso negado', HttpStatus.FORBIDDEN);
       }
       return await this.ordersService.findByMarket(marketId);
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR fetching market orders: ${(error as Error).message}`,
         (error as Error).stack,

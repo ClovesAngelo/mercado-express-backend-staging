@@ -36,6 +36,7 @@ export class CatalogController {
     try {
       return await this.catalogService.findAllCategories();
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR fetching categories: ${(error as Error).message}`,
         (error as Error).stack,
@@ -53,6 +54,7 @@ export class CatalogController {
     try {
       return await this.catalogService.createCategory(createCategoryDto);
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR creating category: ${(error as Error).message}`,
         (error as Error).stack,
@@ -70,6 +72,7 @@ export class CatalogController {
     try {
       return await this.catalogService.findAllProducts();
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR fetching all products: ${(error as Error).message}`,
         (error as Error).stack,
@@ -87,6 +90,7 @@ export class CatalogController {
     try {
       return await this.catalogService.findByMarket(marketId);
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR fetching products by market: ${(error as Error).message}`,
         (error as Error).stack,
@@ -110,6 +114,7 @@ export class CatalogController {
         req.user!,
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR creating product: ${(error as Error).message}`,
         (error as Error).stack,
@@ -135,6 +140,7 @@ export class CatalogController {
         req.user!,
       );
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR updating product: ${(error as Error).message}`,
         (error as Error).stack,
@@ -156,6 +162,7 @@ export class CatalogController {
     try {
       return await this.catalogService.updateStock(id, stockData, req.user!);
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR updating stock: ${(error as Error).message}`,
         (error as Error).stack,
@@ -173,6 +180,7 @@ export class CatalogController {
     try {
       return await this.catalogService.deleteProduct(id, req.user!);
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR deleting product: ${(error as Error).message}`,
         (error as Error).stack,
@@ -190,6 +198,7 @@ export class CatalogController {
     try {
       return await this.catalogService.getProductImagesLibrary();
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR fetching product images library: ${(error as Error).message}`,
         (error as Error).stack,

@@ -64,4 +64,14 @@ async function bootstrap() {
   await app.listen(port);
   logger.log(`Aplicação rodando na porta ${port}`);
 }
-void bootstrap();
+
+bootstrap().catch((error: unknown) => {
+  const startupLogger = new Logger('Bootstrap');
+  startupLogger.error(
+    `Falha ao iniciar a aplicação: ${
+      error instanceof Error ? error.message : String(error)
+    }`,
+    error instanceof Error ? error.stack : undefined,
+  );
+  process.exit(1);
+});

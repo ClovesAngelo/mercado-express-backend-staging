@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  Logger,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -114,7 +119,8 @@ export class AuthService {
       );
       const prismaError = error as { code?: string };
       if (prismaError.code === 'P2002') {
-        throw new Error('Email já cadastrado');
+        // Email duplicado deve responder 409 (não 500)
+        throw new ConflictException('Email já cadastrado');
       }
       throw new Error('Erro ao criar conta');
     }

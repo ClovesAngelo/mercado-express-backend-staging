@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { isPrismaError } from '../prisma/prisma-error.utils';
 
 @Injectable()
 export class CartService {
@@ -174,13 +175,19 @@ export class CartService {
     const cart = await this.prisma.cart.findUnique({ where: { userId } });
     if (!cart) return null;
 
-    return this.prisma.cartItem.delete({
-      where: {
-        cartId_productId: {
-          cartId: cart.id,
-          productId,
+    try {
+      return await this.prisma.cartItem.delete({
+        where: {
+          cartId_productId: {
+            cartId: cart.id,
+            productId,
+          },
         },
-      },
-    });
+      });
+    } catch (error) {
+      // Item já removido em outra sessão/aba: remoção é idempotente
+      if (isPrismaError(error, 'P2025')) return null;
+      throw error;
+    }
   }
 }

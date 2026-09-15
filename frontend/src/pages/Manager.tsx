@@ -91,6 +91,7 @@ export default function Manager() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [marketInfo, setMarketInfo] = useState<MarketInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'orders' | 'settings'>('products');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -132,6 +133,7 @@ export default function Manager() {
   }, [isGestor, user?.marketId]);
 
   const loadData = async () => {
+    setLoadError('');
     try {
       const [productsRes, categoriesRes, ordersRes, marketRes] = await Promise.all([
         api.get(`/catalog/products/market/${user?.marketId}`),
@@ -145,6 +147,7 @@ export default function Manager() {
       setMarketInfo(marketRes.data);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
+      setLoadError('Erro ao carregar dados. Tente novamente mais tarde.');
     } finally {
       setLoading(false);
     }
@@ -356,6 +359,12 @@ export default function Manager() {
           </button>
         )}
       </div>
+
+      {loadError && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {loadError}
+        </div>
+      )}
 
       {marketInfo && (
         <div className="bg-white shadow-md rounded-lg p-6 mb-6">

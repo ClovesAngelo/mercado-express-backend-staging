@@ -27,6 +27,7 @@ export class DashboardController {
     try {
       return await this.dashboardService.getGeneralStats();
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR fetching general stats: ${(error as Error).message}`,
         (error as Error).stack,
@@ -54,6 +55,7 @@ export class DashboardController {
       }
       return await this.dashboardService.getMarketStats(marketId);
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR fetching market stats: ${(error as Error).message}`,
         (error as Error).stack,

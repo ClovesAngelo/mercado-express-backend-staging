@@ -28,6 +28,7 @@ export class UsersController {
     try {
       return await this.usersService.findAll();
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR fetching users: ${(error as Error).message}`,
         (error as Error).stack,
@@ -48,6 +49,7 @@ export class UsersController {
       }
       return await this.usersService.findOne(id);
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR fetching user: ${(error as Error).message}`,
         (error as Error).stack,

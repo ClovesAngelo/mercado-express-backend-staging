@@ -35,6 +35,7 @@ export class ManagersController {
     try {
       return await this.managersService.findAll();
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR fetching managers: ${(error as Error).message}`,
         (error as Error).stack,
@@ -52,6 +53,7 @@ export class ManagersController {
     try {
       return await this.managersService.findOne(id);
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR fetching manager: ${(error as Error).message}`,
         (error as Error).stack,
@@ -97,6 +99,7 @@ export class ManagersController {
       }
       return result;
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR creating manager: ${(error as Error).message}`,
         (error as Error).stack,
@@ -133,6 +136,7 @@ export class ManagersController {
       }
       return result;
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR updating manager: ${(error as Error).message}`,
         (error as Error).stack,
@@ -164,6 +168,7 @@ export class ManagersController {
       }
       return result;
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR deleting manager: ${(error as Error).message}`,
         (error as Error).stack,

@@ -32,12 +32,14 @@ export default function ManagersAdmin() {
     marketId: '',
   });
   const [error, setError] = useState('');
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
+    setLoadError('');
     try {
       const [managersRes, marketsRes] = await Promise.all([
         api.get('/managers'),
@@ -47,6 +49,7 @@ export default function ManagersAdmin() {
       setMarkets(marketsRes.data);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
+      setLoadError('Erro ao carregar gestores. Tente novamente mais tarde.');
     } finally {
       setLoading(false);
     }
@@ -124,6 +127,11 @@ export default function ManagersAdmin() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {loadError && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {loadError}
+        </div>
+      )}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Gestores de Mercado</h1>
         <button

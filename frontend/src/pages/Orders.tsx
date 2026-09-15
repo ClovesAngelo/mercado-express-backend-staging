@@ -55,14 +55,17 @@ const fulfillmentTypeLabels: Record<string, string> = {
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchOrders = async () => {
+      setError('');
       try {
         const { data } = await api.get('/orders/my');
         setOrders(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Erro ao buscar pedidos:', error);
+        setError('Erro ao buscar pedidos. Tente novamente em instantes.');
         setOrders([]);
       } finally {
         setLoading(false);
@@ -81,6 +84,11 @@ export default function Orders() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Meus Pedidos</h1>
+      {error && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
       {orders.length === 0 ? (
         <div className="text-center py-16">
           <Package size={64} className="mx-auto text-gray-300 mb-4" />

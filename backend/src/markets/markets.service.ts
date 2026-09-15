@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { rethrowPrismaError } from '../prisma/prisma-error.utils';
 import * as bcrypt from 'bcrypt';
 import { Prisma } from '@prisma/client';
 import { AuthenticatedUser } from '../types/express';
@@ -49,43 +50,50 @@ export class MarketsService {
   ) {
     const hashedPassword = await bcrypt.hash(managerData.password, 10);
 
-    return this.prisma.$transaction(async (tx) => {
-      const market = await tx.market.create({
-        data: {
-          name: marketData.name,
-          address: marketData.address,
-          description: marketData.description,
-          phone: marketData.phone,
-          imageUrl: marketData.imageUrl,
-        },
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const market = await tx.market.create({
+          data: {
+            name: marketData.name,
+            address: marketData.address,
+            description: marketData.description,
+            phone: marketData.phone,
+            imageUrl: marketData.imageUrl,
+          },
+        });
+
+        const manager = await tx.user.create({
+          data: {
+            email: managerData.email,
+            name: managerData.name,
+            password: hashedPassword,
+            role: 'GESTOR_MERCADO',
+            marketId: market.id,
+          },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            marketId: true,
+          },
+        });
+
+        // NOTA: Não atualizamos mais Market.managerId
+        // A fonte de verdade é User.marketId
+        // Múltiplos gestores podem ter o mesmo marketId
+
+        return {
+          market,
+          manager,
+        };
       });
-
-      const manager = await tx.user.create({
-        data: {
-          email: managerData.email,
-          name: managerData.name,
-          password: hashedPassword,
-          role: 'GESTOR_MERCADO',
-          marketId: market.id,
-        },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          marketId: true,
-        },
+    } catch (error) {
+      // P2002 = email do gestor já cadastrado: responder 409 em vez de 500
+      rethrowPrismaError(error, {
+        conflictMessage: 'Email já cadastrado',
       });
-
-      // NOTA: Não atualizamos mais Market.managerId
-      // A fonte de verdade é User.marketId
-      // Múltiplos gestores podem ter o mesmo marketId
-
-      return {
-        market,
-        manager,
-      };
-    });
+    }
   }
 
   async findAll() {
@@ -164,16 +172,24 @@ export class MarketsService {
   }
 
   async setActive(id: string, isActive: boolean) {
-    return this.prisma.market.update({
-      where: { id },
-      data: { isActive },
-    });
+    try {
+      return await this.prisma.market.update({
+        where: { id },
+        data: { isActive },
+      });
+    } catch (error) {
+      rethrowPrismaError(error, { notFoundMessage: 'Mercado não encontrado' });
+    }
   }
 
   async remove(id: string) {
-    return this.prisma.market.delete({
-      where: { id },
-    });
+    try {
+      return await this.prisma.market.delete({
+        where: { id },
+      });
+    } catch (error) {
+      rethrowPrismaError(error, { notFoundMessage: 'Mercado não encontrado' });
+    }
   }
 
   async update(
@@ -219,16 +235,26 @@ export class MarketsService {
         }
       }
 
-      return this.prisma.market.update({
-        where: { id },
-        data: filteredData,
-      });
+      try {
+        return await this.prisma.market.update({
+          where: { id },
+          data: filteredData,
+        });
+      } catch (error) {
+        rethrowPrismaError(error, {
+          notFoundMessage: 'Mercado não encontrado',
+        });
+      }
     }
 
     // Admin pode atualizar tudo
-    return this.prisma.market.update({
-      where: { id },
-      data,
-    });
+    try {
+      return await this.prisma.market.update({
+        where: { id },
+        data,
+      });
+    } catch (error) {
+      rethrowPrismaError(error, { notFoundMessage: 'Mercado não encontrado' });
+    }
   }
 }

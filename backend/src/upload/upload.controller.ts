@@ -41,6 +41,7 @@ export class UploadController {
       );
       return { url: imageUrl };
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(
         `ERROR uploading image: ${(error as Error).message}`,
         (error as Error).stack,

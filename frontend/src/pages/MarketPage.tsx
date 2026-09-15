@@ -55,6 +55,7 @@ export default function MarketPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [addingId, setAddingId] = useState<string | null>(null);
   const [addedId, setAddedId] = useState<string | null>(null);
@@ -67,6 +68,7 @@ export default function MarketPage() {
   }, [id]);
 
   const loadMarketData = async () => {
+    setErrorMsg(null);
     try {
       const [marketRes, productsRes, categoriesRes] = await Promise.all([
         api.get(`/markets/${id}`),
@@ -78,6 +80,9 @@ export default function MarketPage() {
       setCategories(categoriesRes.data);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
+      setErrorMsg(
+        'Não foi possível carregar o mercado. Tente novamente mais tarde.',
+      );
     } finally {
       setLoading(false);
     }
@@ -150,7 +155,13 @@ export default function MarketPage() {
   if (!market) {
     return (
       <div className="py-12 text-center">
-        <p className="text-red-600">Mercado não encontrado</p>
+        {errorMsg ? (
+          <div className="mx-auto max-w-md rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {errorMsg}
+          </div>
+        ) : (
+          <p className="text-red-600">Mercado não encontrado</p>
+        )}
         <Link to="/" className="mt-4 inline-flex items-center gap-1 text-sm text-emerald-600 hover:underline">
           <ChevronLeft size={14} /> Voltar
         </Link>

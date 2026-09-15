@@ -62,6 +62,7 @@ export default function Admin() {
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [activeTab, setActiveTab] = useState<'dashboard' | 'markets' | 'managers'>('dashboard');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -83,6 +84,7 @@ export default function Admin() {
   }, [isAdmin]);
 
   const loadData = async () => {
+    setLoadError('');
     try {
       const [marketsRes, usersRes, statsRes] = await Promise.all([
         api.get('/markets'),
@@ -94,6 +96,7 @@ export default function Admin() {
       setStats(statsRes.data);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
+      setLoadError('Erro ao carregar dados do painel. Tente novamente mais tarde.');
     } finally {
       setLoading(false);
     }
@@ -212,6 +215,12 @@ export default function Admin() {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Painel Administrativo</h1>
+
+      {loadError && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {loadError}
+        </div>
+      )}
 
       <div className="mb-6">
         <div className="border-b border-gray-200">
