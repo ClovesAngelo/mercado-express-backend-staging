@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CatalogService } from './catalog.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   createMockPrismaService,
   MockedPrismaService,
@@ -9,12 +10,20 @@ import {
 describe('CatalogService', () => {
   let catalogService: CatalogService;
   let prisma: MockedPrismaService;
+  let notificationsService: NotificationsService;
 
   beforeEach(async () => {
     prisma = createMockPrismaService();
+    notificationsService = {
+      evaluateProductStock: jest.fn(),
+    } as unknown as NotificationsService;
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [CatalogService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        CatalogService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: NotificationsService, useValue: notificationsService },
+      ],
     }).compile();
 
     catalogService = module.get<CatalogService>(CatalogService);

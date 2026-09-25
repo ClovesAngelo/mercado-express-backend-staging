@@ -2,6 +2,7 @@ import { PrismaService } from '../../src/prisma/prisma.service';
 
 export interface PrismaModelMock {
   findUnique: jest.Mock;
+  findFirst: jest.Mock;
   findMany: jest.Mock;
   create: jest.Mock;
   update: jest.Mock;
@@ -9,6 +10,7 @@ export interface PrismaModelMock {
   updateMany: jest.Mock;
   upsert: jest.Mock;
   createMany: jest.Mock;
+  count: jest.Mock;
 }
 
 export interface MockedPrismaService {
@@ -25,6 +27,7 @@ export interface MockedPrismaService {
   orderItem: PrismaModelMock;
   auditLog: PrismaModelMock;
   productImage: PrismaModelMock;
+  notification: PrismaModelMock;
 }
 
 const jestFn = (): jest.Mock => jest.fn();
@@ -32,6 +35,7 @@ const jestFn = (): jest.Mock => jest.fn();
 function createModelMock(): PrismaModelMock {
   return {
     findUnique: jestFn(),
+    findFirst: jestFn(),
     findMany: jestFn(),
     create: jestFn(),
     update: jestFn(),
@@ -39,6 +43,7 @@ function createModelMock(): PrismaModelMock {
     updateMany: jestFn(),
     upsert: jestFn(),
     createMany: jestFn(),
+    count: jestFn(),
   };
 }
 
@@ -63,6 +68,7 @@ export function createMockPrismaService(): MockedPrismaService {
     orderItem: createModelMock(),
     auditLog: createModelMock(),
     productImage: createModelMock(),
+    notification: createModelMock(),
   };
 
   return defaultMock;

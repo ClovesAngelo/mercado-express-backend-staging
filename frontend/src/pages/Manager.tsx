@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { notificationsService, StockNotification } from '../services/notifications.service';
 import ImageUpload from '../components/ImageUpload';
-import { Package, AlertTriangle } from 'lucide-react';
+import { Package, AlertTriangle, Bell, BellRing, Check, X } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -124,13 +125,33 @@ export default function Manager() {
     quantity: 0,
     minStock: 0,
   });
+  const [notifications, setNotifications] = useState<StockNotification[]>([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
 
   useEffect(() => {
     if (!isGestor || !user?.marketId) {
       return;
     }
     loadData();
+    const interval = setInterval(loadNotifications, 60000);
+    return () => clearInterval(interval);
   }, [isGestor, user?.marketId]);
+
+  const loadNotifications = async () => {
+    if (notificationsLoading) {
+      return;
+    }
+    setNotificationsLoading(true);
+    try {
+      const data = await notificationsService.getNotifications();
+      setNotifications(data);
+    } catch (error) {
+      console.error('Erro ao carregar notificações:', error);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
 
   const loadData = async () => {
     setLoadError('');
@@ -145,6 +166,7 @@ export default function Manager() {
       setCategories(categoriesRes.data);
       setOrders(ordersRes.data);
       setMarketInfo(marketRes.data);
+      loadNotifications();
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       setLoadError('Erro ao carregar dados. Tente novamente mais tarde.');
@@ -328,6 +350,32 @@ export default function Manager() {
     return product.stock <= (product.minStock || 0);
   };
 
+  const unreadNotifications = notifications.filter(n => !n.isRead);
+
+  const handleToggleNotifications = () => {
+    setNotificationsOpen(!notificationsOpen);
+  };
+
+  const handleMarkNotificationRead = async (id: string) => {
+    try {
+      await notificationsService.markAsRead(id);
+      setNotifications(prev =>
+        prev.map(n => n.id === id ? { ...n, isRead: true } : n)
+      );
+    } catch (error) {
+      console.error('Erro ao marcar notificação como lida:', error);
+    }
+  };
+
+  const handleMarkAllNotificationsRead = async () => {
+    try {
+      await notificationsService.markAllAsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    } catch (error) {
+      console.error('Erro ao marcar notificações como lidas:', error);
+    }
+  };
+
   if (!isGestor) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -350,19 +398,136 @@ export default function Manager() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Painel do Gestor</h1>
-        {marketInfo && (
-          <button
-            onClick={handleEditMarket}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Editar Meu Mercado
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <button
+              onClick={handleToggleNotifications}
+              aria-label="Notificações"
+              className="relative p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition"
+              title="Notificações de estoque"
+            >
+              {unreadNotifications.length > 0 ? (
+                <BellRing size={22} className="text-yellow-600" />
+              ) : (
+                <Bell size={22} className="text-gray-600" />
+              )}
+              {unreadNotifications.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {unreadNotifications.length > 9 ? '9+' : unreadNotifications.length}
+                </span>
+              )}
+            </button>
+
+            {notificationsOpen && (
+              <div className="absolute right-0 top-full mt-2 z-50 w-96 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-y-auto">
+                <div className="flex justify-between items-center px-4 py-3 border-b border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-800">
+                    Alertas de Estoque
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    {unreadNotifications.length > 0 && (
+                      <button
+                        onClick={handleMarkAllNotificationsRead}
+                        className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                      >
+                        <Check size={14} />
+                        Marcar todas como lidas
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setNotificationsOpen(false)}
+                      aria-label="Cerrar notificaciones"
+                      className="text-gray-400 hover:text-gray-600"
+                      title="Cerrar"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                {notifications.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-sm text-gray-500">
+                    <Bell size={32} className="mx-auto mb-2 text-gray-300" />
+                    <p>Não há alertas de estoque no momento.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {notifications.map(notification => (
+                      <div
+                        key={notification.id}
+                        className={`px-4 py-3 ${notification.isRead ? 'bg-white' : 'bg-yellow-50'}`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900">
+                              {notification.title}
+                            </p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {notification.message}
+                            </p>
+                            {notification.product && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Estoque atual: {notification.product.stock} unidade(s) · Alerta: {notification.product.minStock}
+                              </p>
+                            )}
+                          </div>
+                          {!notification.isRead && (
+                            <button
+                              onClick={() => handleMarkNotificationRead(notification.id)}
+                              className="text-blue-600 hover:text-blue-800 text-xs whitespace-nowrap"
+                              title="Marcar como lida"
+                            >
+                              Marcar lida
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {marketInfo && (
+            <button
+              onClick={handleEditMarket}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              Editar Meu Mercado
+            </button>
+          )}
+        </div>
       </div>
 
       {loadError && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {loadError}
+        </div>
+      )}
+
+      {unreadNotifications.length > 0 && (
+        <div className="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4 flex items-center gap-3">
+          <AlertTriangle className="text-yellow-600 flex-shrink-0" size={24} />
+          <div className="flex-1 text-sm text-yellow-800">
+            <p className="font-medium">
+              {unreadNotifications.length === 1
+                ? '1 produto está por terminar o stock'
+                : `${unreadNotifications.length} produtos estão por terminar o stock`}
+            </p>
+            <p className="text-xs text-yellow-700 mt-1">
+              Revise os produtos na aba Produtos e reponga o estoque para não ficar sem stock.
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setNotificationsOpen(true);
+              setActiveTab('products');
+            }}
+            className="px-3 py-1.5 bg-yellow-100 text-yellow-800 rounded text-xs font-medium hover:bg-yellow-200"
+          >
+            Ver alertas
+          </button>
         </div>
       )}
 
@@ -1089,7 +1254,7 @@ export default function Manager() {
 
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Estoque Mínimo *
+                  Alerta de Estoque (Mínimo) *
                 </label>
                 <input
                   type="number"
@@ -1100,7 +1265,7 @@ export default function Manager() {
                   className="w-full border rounded px-3 py-2"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Alerta será exibido quando estoque atingir este valor
+                  Você receberá uma notificação quando o estoque chegue a este valor
                 </p>
               </div>
 

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { rethrowPrismaError } from '../prisma/prisma-error.utils';
 import { AuthenticatedUser } from '../types/express';
 import {
@@ -15,7 +16,10 @@ import {
 
 @Injectable()
 export class CatalogService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   async findAllCategories() {
     return this.prisma.category.findMany({
@@ -102,7 +106,7 @@ export class CatalogService {
         'O administrador deve informar o mercado do produto.',
       );
     }
-    return this.prisma.product.create({
+    const created = await this.prisma.product.create({
       data: {
         ...productData,
         marketId:
@@ -114,6 +118,8 @@ export class CatalogService {
         category: true,
       },
     });
+    await this.notificationsService.evaluateProductStock(created.id);
+    return created;
   }
 
   async updateProduct(
@@ -123,13 +129,15 @@ export class CatalogService {
   ) {
     await this.assertProductAccess(id, user);
     try {
-      return await this.prisma.product.update({
+      const updated = await this.prisma.product.update({
         where: { id },
         data: updateProductDto,
         include: {
           category: true,
         },
       });
+      await this.notificationsService.evaluateProductStock(updated.id);
+      return updated;
     } catch (error) {
       // Corrida: produto removido entre a checagem e o update
       rethrowPrismaError(error, { notFoundMessage: 'Produto não encontrado' });
@@ -155,7 +163,7 @@ export class CatalogService {
   ) {
     await this.assertProductAccess(id, user);
     try {
-      return await this.prisma.product.update({
+      const updated = await this.prisma.product.update({
         where: { id },
         data: {
           stock: stockData.stock,
@@ -165,6 +173,8 @@ export class CatalogService {
           category: true,
         },
       });
+      await this.notificationsService.evaluateProductStock(updated.id);
+      return updated;
     } catch (error) {
       rethrowPrismaError(error, { notFoundMessage: 'Produto não encontrado' });
     }

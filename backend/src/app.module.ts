@@ -15,6 +15,7 @@ import { UploadModule } from './upload/upload.module';
 import { ManagersModule } from './managers/managers.module';
 import { HealthModule } from './health/health.module';
 import { AuditModule } from './audit/audit.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { AuditModule } from './audit/audit.module';
     ManagersModule,
     HealthModule,
     AuditModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

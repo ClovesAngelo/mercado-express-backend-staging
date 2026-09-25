@@ -324,11 +324,14 @@ export default function CreateProduct() {
                         className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="0"
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Número de unidades disponíveis ao criar o produto
+                      </p>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Estoque Mínimo
+                        Alerta de Estoque
                       </label>
                       <input
                         type="number"
@@ -339,6 +342,9 @@ export default function CreateProduct() {
                         className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="0"
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Você receberá uma notificação quando o estoque chegar a esta quantidade
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -498,6 +504,12 @@ export default function CreateProduct() {
                       <div className="flex justify-between">
                         <span className="text-gray-600">Estoque:</span>
                         <span className="font-medium text-gray-900">{formData.stock} unidades</span>
+                      </div>
+                    )}
+                    {formData.minStock && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Alerta de estoque:</span>
+                        <span className="font-medium text-gray-900">{formData.minStock} unidades</span>
                       </div>
                     )}
                   </div>

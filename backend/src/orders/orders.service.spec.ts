@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   createMockPrismaService,
   MockedPrismaService,
@@ -10,12 +11,20 @@ import {
 describe('OrdersService', () => {
   let ordersService: OrdersService;
   let prisma: MockedPrismaService;
+  let notificationsService: NotificationsService;
 
   beforeEach(async () => {
     prisma = createMockPrismaService();
+    notificationsService = {
+      evaluateProductStock: jest.fn(),
+    } as unknown as NotificationsService;
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [OrdersService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        OrdersService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: NotificationsService, useValue: notificationsService },
+      ],
     }).compile();
 
     ordersService = module.get<OrdersService>(OrdersService);

@@ -5,6 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { FulfillmentType, PaymentMethod, Prisma } from '@prisma/client';
 import { OrderStatus } from './dto/update-order-status.dto';
@@ -30,7 +31,10 @@ const orderItemInclude: Prisma.OrderItemInclude = {
 @Injectable()
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   async create(
     userId: string,
@@ -200,11 +204,7 @@ export class OrdersService {
   async findByUser(userId: string) {
     return this.prisma.order.findMany({
       where: { userId },
-      include: {
-        items: {
-          include: orderItemInclude,
-        },
-      },
+      include: { items: { include: orderItemInclude } },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -212,24 +212,14 @@ export class OrdersService {
   async findByMarket(marketId: string) {
     return this.prisma.order.findMany({
       where: { marketId },
-      include: {
-        items: {
-          include: orderItemInclude,
-        },
-        user: true,
-      },
+      include: { items: { include: orderItemInclude }, user: true },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async findAll() {
     return this.prisma.order.findMany({
-      include: {
-        items: {
-          include: orderItemInclude,
-        },
-        user: true,
-      },
+      include: { items: { include: orderItemInclude }, user: true },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -326,6 +316,11 @@ export class OrdersService {
       });
 
       this.logger.log(`Order ${id} marked as DELIVERED and stock deducted`);
+      void Promise.all(
+        updatedOrder.items.map((item) =>
+          this.notificationsService.evaluateProductStock(item.productId),
+        ),
+      );
       return updatedOrder;
     }
 
