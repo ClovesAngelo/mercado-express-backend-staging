@@ -13,6 +13,16 @@ export interface ProductImage {
   tags: string[];
 }
 
+/** Resultado de busca no Open Food Facts (mapeado pelo backend). */
+export interface ProductImageSearchResult {
+  id: string;
+  url: string;
+  name: string;
+  category?: string;
+  tags: string[];
+  source: 'open-food-facts';
+}
+
 export interface CreateProductData {
   name: string;
   description?: string;
@@ -32,6 +42,22 @@ export const productService = {
 
   getProductImagesLibrary: async (): Promise<ProductImage[]> => {
     const { data } = await api.get('/catalog/product-images/library');
+    return data;
+  },
+
+  /** Busca imagens reais de produtos no Open Food Facts (foto da embalagem). */
+  searchProductImages: async (query: string): Promise<ProductImageSearchResult[]> => {
+    const { data } = await api.get('/catalog/product-images/search', {
+      params: { q: query },
+    });
+    return data;
+  },
+
+  /** Importa a imagem escolhida do Open Food Facts para o armazenamento do mercado. */
+  importProductImage: async (imageUrl: string): Promise<{ url: string }> => {
+    const { data } = await api.post('/catalog/product-images/import', {
+      imageUrl,
+    });
     return data;
   },
 

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { productService, Category, ProductImage } from '../services/product.service';
+import { productService, Category, ProductImage, ProductImageSearchResult } from '../services/product.service';
 import { uploadService } from '../services/upload.service';
 import ImageCropModal from '../components/ImageCropModal';
 import { blobToFile, type CroppedImage } from '../utils/imageCrop';
-import { Package, Upload, Image, ChevronLeft, AlertCircle, CheckCircle } from 'lucide-react';
+import { Package, Upload, Image, Search, ChevronLeft, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function CreateProduct() {
   const { user, isGestor } = useAuth();
@@ -33,6 +33,14 @@ export default function CreateProduct() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [cropModalOpen, setCropModalOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+
+  // Busca de imagens reais no Open Food Facts
+  const [galleryTab, setGalleryTab] = useState<'library' | 'openfoodfacts'>('library');
+  const [offSearchTerm, setOffSearchTerm] = useState('');
+  const [offResults, setOffResults] = useState<ProductImageSearchResult[]>([]);
+  const [offSearching, setOffSearching] = useState(false);
+  const [offImportingId, setOffImportingId] = useState<string | null>(null);
+  const [offError, setOffError] = useState('');
 
   useEffect(() => {
     if (!isGestor || !user?.marketId) {
@@ -80,6 +88,53 @@ export default function CreateProduct() {
     setFormData(prev => ({ ...prev, imageUrl: image.url }));
     setImagePreview(image.url);
     setSelectedImageFile(null);
+  };
+
+  const handleOffSearch = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const term = offSearchTerm.trim();
+    if (!term) {
+      setOffError('Digite o nome do produto para buscar no Open Food Facts.');
+      return;
+    }
+    setOffError('');
+    setOffSearching(true);
+    setOffResults([]);
+    try {
+      const results = await productService.searchProductImages(term);
+      setOffResults(results);
+      if (results.length === 0) {
+        setOffError('Nenhum produto encontrado. Tente outro termo ou use a galeria pronta.');
+      }
+    } catch (error: any) {
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        'Erro ao buscar imagens no Open Food Facts. Tente novamente em instantes.';
+      setOffError(message);
+    } finally {
+      setOffSearching(false);
+    }
+  };
+
+  const handleOffSelect = async (result: ProductImageSearchResult) => {
+    if (offImportingId) return;
+    setOffImportingId(result.id);
+    setOffError('');
+    try {
+      const { url } = await productService.importProductImage(result.url);
+      setFormData(prev => ({ ...prev, imageUrl: url }));
+      setImagePreview(url);
+      setSelectedImageFile(null);
+    } catch (error: any) {
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        'Erro ao importar a imagem. Tente outra opção ou faça upload.';
+      setOffError(message);
+    } finally {
+      setOffImportingId(null);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,7 +202,7 @@ export default function CreateProduct() {
       }
 
       if (!finalImageUrl) {
-        setError('Selecione uma imagem da galeria ou faça upload de uma imagem');
+        setError('Selecione uma imagem da galeria, do Open Food Facts ou faça upload de uma imagem');
         setLoading(false);
         return;
       }
@@ -357,17 +412,45 @@ export default function CreateProduct() {
                   Galeria de Imagens
                 </h2>
 
-                <div className="mb-4">
-                  <input
-                    type="text"
-                    placeholder="Buscar por nome, categoria ou tag..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                {/* Abas: galeria pronta x Open Food Facts */}
+                <div className="mb-4 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setGalleryTab('library')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                      galleryTab === 'library'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Galeria Pronta
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGalleryTab('openfoodfacts')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                      galleryTab === 'openfoodfacts'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Open Food Facts
+                  </button>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-96 overflow-y-auto p-2">
+                {galleryTab === 'library' ? (
+                  <>
+                    <div className="mb-4">
+                      <input
+                        type="text"
+                        placeholder="Buscar por nome, categoria ou tag..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-96 overflow-y-auto p-2">
                   {filteredImages.map(image => (
                     <div
                       key={image.id}
@@ -393,10 +476,94 @@ export default function CreateProduct() {
                   ))}
                 </div>
 
-                {filteredImages.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    Nenhuma imagem encontrada
-                  </div>
+                    {filteredImages.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        Nenhuma imagem encontrada
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <form onSubmit={handleOffSearch} className="mb-3 flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Busque produtos reais (ex: Arroz, Coca-Cola, Café)"
+                        value={offSearchTerm}
+                        onChange={(e) => setOffSearchTerm(e.target.value)}
+                        className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <button
+                        type="submit"
+                        disabled={offSearching}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium transition"
+                      >
+                        <Search size={16} />
+                        {offSearching ? 'Buscando...' : 'Buscar'}
+                      </button>
+                    </form>
+
+                    <p className="text-xs text-gray-500 mb-3">
+                      Fotos reais de produtos do Open Food Facts (banco aberto com milhões de itens).
+                      Ao escolher, a imagem é importada para o armazenamento do seu mercado. Imagens CC-BY-SA.
+                    </p>
+
+                    {offError && (
+                      <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                        <AlertCircle className="text-red-500 flex-shrink-0 mt-0.5" size={16} />
+                        <p className="text-red-700 text-sm">{offError}</p>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-96 overflow-y-auto p-2">
+                      {offResults.map(result => {
+                        const selected = formData.imageUrl === result.url;
+                        return (
+                          <div
+                            key={result.id}
+                            onClick={() => handleOffSelect(result)}
+                            title={selected ? 'Imagem selecionada' : 'Usar esta imagem'}
+                            className={`cursor-pointer rounded-lg border-2 transition ${
+                              selected
+                                ? 'border-blue-500 ring-2 ring-blue-200'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <img
+                              src={result.url}
+                              alt={result.name}
+                              loading="lazy"
+                              className="w-full h-28 object-cover rounded-t-lg bg-gray-100"
+                            />
+                            <div className="p-2 bg-gray-50 rounded-b-lg">
+                              <p className="text-sm font-medium text-gray-900 truncate">{result.name}</p>
+                              <p className="text-xs text-gray-500 truncate">{result.category}</p>
+                              <p className="mt-1 text-xs font-medium text-blue-600">
+                                {offImportingId === result.id
+                                  ? 'Importando...'
+                                  : selected
+                                    ? '✓ Imagem selecionada'
+                                    : 'Usar esta imagem'}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {offSearching && (
+                      <div className="text-center py-8 text-gray-500">
+                        <div className="animate-spin inline-block w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mb-2" />
+                        <p>Buscando produtos no Open Food Facts...</p>
+                      </div>
+                    )}
+
+                    {!offSearching && offResults.length === 0 && !offError && (
+                      <div className="text-center py-8 text-gray-400">
+                        <Search size={48} className="mx-auto mb-2 opacity-40" />
+                        <p className="text-sm">Busque por um produto real para ver as imagens disponíveis</p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>

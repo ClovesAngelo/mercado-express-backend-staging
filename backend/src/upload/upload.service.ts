@@ -43,14 +43,94 @@ export class UploadService {
     }
 
     const fileExt = file.originalname.split('.').pop() || 'jpg';
+    return this.storeImage(file.buffer, file.mimetype, marketId, fileExt);
+  }
+
+  /**
+   * Importa para o armazenamento do mercado uma imagem hospedada no Open Food
+   * Facts (images.openfoodfacts.org). Baixa a foto do produto, valida tipo e
+   * tamanho e rehospeda no Supabase — garantindo durabilidade (não depende do
+   * hotlink do OFF) e consistência com o fluxo de upload já existente.
+   */
+  async importFromOpenFoodFacts(
+    imageUrl: string,
+    marketId: string,
+  ): Promise<string> {
+    if (!imageUrl.startsWith('https://images.openfoodfacts.org/')) {
+      throw new BadRequestException(
+        'A imagem deve ser originada no armazenamento do Open Food Facts.',
+      );
+    }
+
+    let response: Response;
+    try {
+      response = await fetch(imageUrl, {
+        headers: {
+          'User-Agent':
+            'MercadoExpress/1.0 (https://github.com/ClovesAngelo/mercado-express-backend-staging)',
+        },
+        signal: AbortSignal.timeout(15_000),
+        redirect: 'follow',
+      });
+    } catch {
+      throw new BadRequestException(
+        'Não foi possível baixar a imagem do Open Food Facts.',
+      );
+    }
+
+    if (!response.ok) {
+      throw new BadRequestException(
+        `Falha ao baixar a imagem do Open Food Facts (HTTP ${response.status}).`,
+      );
+    }
+
+    const contentType = (response.headers.get('content-type') ?? '')
+      .toLowerCase()
+      .trim();
+    if (!this.isAllowedContentType(contentType)) {
+      throw new BadRequestException(
+        'O arquivo baixado não é uma imagem válida (JPG, PNG ou WEBP).',
+      );
+    }
+
+    const contentLength = Number(response.headers.get('content-length') ?? 0);
+    if (contentLength > 5 * 1024 * 1024) {
+      throw new BadRequestException('Imagem muito grande (máx. 5MB).');
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.byteLength > 5 * 1024 * 1024) {
+      throw new BadRequestException('Imagem muito grande (máx. 5MB).');
+    }
+
+    return this.storeImage(buffer, contentType, marketId);
+  }
+
+  private isAllowedContentType(contentType: string): boolean {
+    const baseType = contentType.split(';')[0]?.trim().toLowerCase() ?? '';
+    return ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(
+      baseType,
+    );
+  }
+
+  private async storeImage(
+    buffer: Buffer,
+    contentType: string,
+    marketId: string,
+    fileExtOverride?: string,
+  ): Promise<string> {
+    const fileExt =
+      fileExtOverride ??
+      contentType.split('/')[1]?.split(';')[0]?.trim() ??
+      'jpg';
     const fileName = `${marketId}-${uuidv4()}.${fileExt}`;
 
     this.logger.log(`Fazendo upload: ${fileName}`);
 
     const { error } = await this.supabase.storage
       .from('market-images')
-      .upload(fileName, file.buffer, {
-        contentType: file.mimetype,
+      .upload(fileName, buffer, {
+        contentType,
         cacheControl: '3600',
         upsert: false,
       });

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -6,8 +7,10 @@ import {
 import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { UploadService } from '../upload/upload.service';
 import { rethrowPrismaError } from '../prisma/prisma-error.utils';
 import { AuthenticatedUser } from '../types/express';
+import { OpenFoodFactsService } from './open-food-facts.service';
 import {
   CreateProductDto,
   UpdateProductDto,
@@ -19,6 +22,8 @@ export class CatalogService {
   constructor(
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
+    private openFoodFactsService: OpenFoodFactsService,
+    private uploadService: UploadService,
   ) {}
 
   async findAllCategories() {
@@ -225,5 +230,55 @@ export class CatalogService {
       where: { isActive: true },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  /**
+   * Busca imagens reais de produtos no Open Food Facts (fotos da embalagem).
+   * O resultado é usado na tela de criação de produto como nova galeria.
+   */
+  async searchProductImages(query: string) {
+    const results = await this.openFoodFactsService.searchProducts(query);
+    return results.map((item) => ({
+      id: `off-${item.code}`,
+      url: item.imageUrl,
+      name: item.productName,
+      category: item.brands,
+      tags: item.quantity ? [item.quantity] : [],
+      source: 'open-food-facts' as const,
+    }));
+  }
+
+  /**
+   * Importa uma imagem do Open Food Facts e a rehospeda no armazenamento do
+   * mercado (Supabase), retornando a URL pública permanente do produto.
+   */
+  async importProductImage(
+    imageUrl: string,
+    marketId: string | undefined,
+    user: AuthenticatedUser,
+  ) {
+    if (!this.openFoodFactsService.isOpenFoodFactsImageUrl(imageUrl)) {
+      throw new BadRequestException(
+        'A imagem deve ser originada no Open Food Facts.',
+      );
+    }
+
+    const targetMarketId =
+      user.role === UserRole.GESTOR_MERCADO ? user.marketId : marketId;
+
+    if (!targetMarketId) {
+      if (user.role === UserRole.ADMIN_GERAL) {
+        throw new BadRequestException(
+          'O administrador deve informar o mercado da imagem.',
+        );
+      }
+      throw new ForbiddenException('Gestor sem mercado vinculado.');
+    }
+
+    const url = await this.uploadService.importFromOpenFoodFacts(
+      imageUrl,
+      targetMarketId,
+    );
+    return { url };
   }
 }

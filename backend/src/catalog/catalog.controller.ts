@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Delete,
+  Query,
   UseGuards,
   HttpException,
   HttpStatus,
@@ -22,6 +23,7 @@ import {
   CreateProductDto,
   UpdateProductDto,
   UpdateStockDto,
+  ImportProductImageDto,
 } from './dto/product.dto';
 
 @Controller('catalog')
@@ -205,6 +207,56 @@ export class CatalogController {
       );
       throw new HttpException(
         (error as Error)?.message || 'Erro ao buscar biblioteca de imagens',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Get('product-images/search')
+  @Roles(UserRole.ADMIN_GERAL, UserRole.GESTOR_MERCADO)
+  async searchProductImages(@Query('q') query?: string) {
+    try {
+      if (!query || !query.trim()) {
+        throw new HttpException(
+          'Informe um termo de busca.',
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      return await this.catalogService.searchProductImages(query);
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(
+        `ERROR searching product images: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
+      throw new HttpException(
+        (error as Error)?.message ||
+          'Erro ao buscar imagens no Open Food Facts',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Post('product-images/import')
+  @Roles(UserRole.ADMIN_GERAL, UserRole.GESTOR_MERCADO)
+  async importProductImage(
+    @Body() importDto: ImportProductImageDto,
+    @Req() req: Request,
+  ) {
+    try {
+      return await this.catalogService.importProductImage(
+        importDto.imageUrl,
+        importDto.marketId,
+        req.user!,
+      );
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(
+        `ERROR importing product image: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
+      throw new HttpException(
+        (error as Error)?.message || 'Erro ao importar imagem',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

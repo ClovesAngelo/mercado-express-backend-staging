@@ -2,27 +2,51 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CatalogService } from './catalog.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { OpenFoodFactsService } from './open-food-facts.service';
+// Somente para fins de tipo/token. O módulo real não é carregado no teste
+// (evita o pacote 'uuid' v14, que é ESM e o Jest CJS não interpreta).
+import { UploadService } from '../upload/upload.service';
 import {
   createMockPrismaService,
   MockedPrismaService,
 } from '../../test/helpers/prisma-mock';
 
+jest.mock('../upload/upload.service', () => ({
+  UploadService: class UploadServiceMock {
+    importFromOpenFoodFacts = jest.fn();
+  },
+}));
+
 describe('CatalogService', () => {
   let catalogService: CatalogService;
   let prisma: MockedPrismaService;
   let notificationsService: NotificationsService;
+  let openFoodFactsService: {
+    searchProducts: jest.Mock;
+    isOpenFoodFactsImageUrl: jest.Mock;
+  };
+  let uploadService: { importFromOpenFoodFacts: jest.Mock };
 
   beforeEach(async () => {
     prisma = createMockPrismaService();
     notificationsService = {
       evaluateProductStock: jest.fn(),
     } as unknown as NotificationsService;
+    openFoodFactsService = {
+      searchProducts: jest.fn(),
+      isOpenFoodFactsImageUrl: jest.fn(),
+    };
+    uploadService = {
+      importFromOpenFoodFacts: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CatalogService,
         { provide: PrismaService, useValue: prisma },
         { provide: NotificationsService, useValue: notificationsService },
+        { provide: OpenFoodFactsService, useValue: openFoodFactsService },
+        { provide: UploadService, useValue: uploadService },
       ],
     }).compile();
 
@@ -227,6 +251,129 @@ describe('CatalogService', () => {
         where: { id: 'cat-1' },
       });
       expect(result).toEqual(mockCategory);
+    });
+  });
+
+  describe('searchProductImages', () => {
+    it('should map Open Food Facts results to the product image shape', async () => {
+      openFoodFactsService.searchProducts.mockResolvedValue([
+        {
+          code: '1234567890123',
+          productName: 'Arroz Integral',
+          brands: 'Marca Teste',
+          quantity: '1kg',
+          imageUrl:
+            'https://images.openfoodfacts.org/images/products/123/456/789/0123/front_pt.1.400.jpg',
+        },
+      ]);
+
+      const result = await catalogService.searchProductImages('arroz');
+
+      expect(openFoodFactsService.searchProducts).toHaveBeenCalledWith('arroz');
+      expect(result).toEqual([
+        {
+          id: 'off-1234567890123',
+          url: 'https://images.openfoodfacts.org/images/products/123/456/789/0123/front_pt.1.400.jpg',
+          name: 'Arroz Integral',
+          category: 'Marca Teste',
+          tags: ['1kg'],
+          source: 'open-food-facts',
+        },
+      ]);
+    });
+  });
+
+  describe('importProductImage', () => {
+    const offImageUrl =
+      'https://images.openfoodfacts.org/images/products/123/456/789/0123/front_pt.1.400.jpg';
+
+    it('should import image for a gestor using their market', async () => {
+      openFoodFactsService.isOpenFoodFactsImageUrl.mockReturnValue(true);
+      uploadService.importFromOpenFoodFacts.mockResolvedValue(
+        'https://supabase.example/storage/v1/object/public/market-images/market-1-abc.jpg',
+      );
+
+      const result = await catalogService.importProductImage(
+        offImageUrl,
+        undefined,
+        {
+          id: 'user-1',
+          role: 'GESTOR_MERCADO',
+          email: 'g@test.com',
+          marketId: 'market-1',
+        } as never,
+      );
+
+      expect(uploadService.importFromOpenFoodFacts).toHaveBeenCalledWith(
+        offImageUrl,
+        'market-1',
+      );
+      expect(result).toEqual({
+        url: 'https://supabase.example/storage/v1/object/public/market-images/market-1-abc.jpg',
+      });
+    });
+
+    it('should import image for an admin with marketId in the body', async () => {
+      openFoodFactsService.isOpenFoodFactsImageUrl.mockReturnValue(true);
+      uploadService.importFromOpenFoodFacts.mockResolvedValue(
+        'https://supabase.example/storage/v1/object/public/market-images/market-2-abc.jpg',
+      );
+
+      const result = await catalogService.importProductImage(
+        offImageUrl,
+        'market-2',
+        { id: 'admin-1', role: 'ADMIN_GERAL', email: 'a@test.com' } as never,
+      );
+
+      expect(uploadService.importFromOpenFoodFacts).toHaveBeenCalledWith(
+        offImageUrl,
+        'market-2',
+      );
+      expect(result).toEqual({
+        url: 'https://supabase.example/storage/v1/object/public/market-images/market-2-abc.jpg',
+      });
+    });
+
+    it('should reject URLs from outside Open Food Facts', async () => {
+      openFoodFactsService.isOpenFoodFactsImageUrl.mockReturnValue(false);
+
+      await expect(
+        catalogService.importProductImage(
+          'https://evil.example.com/x.jpg',
+          undefined,
+          {
+            id: 'user-1',
+            role: 'GESTOR_MERCADO',
+            email: 'g@test.com',
+            marketId: 'market-1',
+          } as never,
+        ),
+      ).rejects.toThrow('A imagem deve ser originada no Open Food Facts.');
+    });
+
+    it('should require a market for admins', async () => {
+      openFoodFactsService.isOpenFoodFactsImageUrl.mockReturnValue(true);
+
+      await expect(
+        catalogService.importProductImage(offImageUrl, undefined, {
+          id: 'admin-1',
+          role: 'ADMIN_GERAL',
+          email: 'a@test.com',
+        } as never),
+      ).rejects.toThrow('O administrador deve informar o mercado da imagem.');
+    });
+
+    it('should forbid gestor without a bound market', async () => {
+      openFoodFactsService.isOpenFoodFactsImageUrl.mockReturnValue(true);
+
+      await expect(
+        catalogService.importProductImage(offImageUrl, undefined, {
+          id: 'user-1',
+          role: 'GESTOR_MERCADO',
+          email: 'g@test.com',
+          marketId: null,
+        } as never),
+      ).rejects.toThrow('Gestor sem mercado vinculado.');
     });
   });
 });
