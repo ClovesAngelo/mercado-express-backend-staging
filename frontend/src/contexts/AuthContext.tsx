@@ -63,9 +63,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return;
           }
 
-          // Validar token no backend (fonte de verdade)
+          // Validar token no backend (fonte de verdade) com timeout de segurança
+          // Caso o backend esteja suspenso ou demorando (cold-start), não trava a UI em loading
           try {
-            const validatedUser = await authService.validateToken(parsedUser.id);
+            const validatePromise = authService.validateToken(parsedUser.id);
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Auth validation timeout')), 4000)
+            );
+            const validatedUser = await Promise.race([validatePromise, timeoutPromise]) as any;
             setToken(savedToken);
             setUser({
               id: validatedUser.id,
@@ -80,8 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               console.warn('[AuthContext] Token inválido, limpando sessão...');
               clearInvalidAuth();
             } else {
-              // Erro de rede, manter sessão do localStorage
-              console.warn('[AuthContext] Erro ao validar token, mantendo sessão local:', error.message);
+              // Erro de rede ou timeout do backend: mantém sessão local para não travar o carregamento
+              console.warn('[AuthContext] Validação remota não concluiu a tempo, mantendo sessão local:', error.message);
               setToken(savedToken);
               setUser(parsedUser as User);
             }
